@@ -72,7 +72,7 @@ pub enum Blocks {
 use std::io::Write;
 
 use classicl::server::LevelDataChunk;
-use libflate::gzip::Encoder;
+use flate2::{Compression, write::GzEncoder as Enc};
 use noise::{Add, Constant, NoiseFn, ScalePoint, SuperSimplex};
 
 pub struct TerrainNoise {
@@ -148,13 +148,11 @@ impl Terrain {
     }
 
     pub fn to_chunks(&self) -> Vec<LevelDataChunk> {
-        let mut buf = vec![];
-        let mut map = Encoder::new(&mut buf).unwrap();
-        let size: u32 = self.size.0 as u32 * self.size.1 as u32 * self.size.2 as u32;
-        let mut raw = Vec::from(size.to_be_bytes());
-        raw.append(&mut self.inner.clone());
-        map.write_all(&raw).unwrap();
-        let data = map.finish().unwrap().0;
+        let mut e = Enc::new(Vec::new(), Compression::fast());
+        let size: [u8; 4] = (self.size.0 as u32 * self.size.1 as u32 * self.size.2 as u32).to_be_bytes();
+        e.write_all(&size).unwrap();
+        e.write_all(&self.inner).unwrap();
+        let data = e.finish().unwrap();
         let mut bytes_sent = 0;
         let total = data.len();
         data.chunks(1024)

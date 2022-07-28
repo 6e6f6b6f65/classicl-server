@@ -72,7 +72,7 @@ dependencies = [
 [[package]]
 name = "classicl"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#5ec5092737d268dc49b902b8834f553939d93ef4"
+source = "git+https://gitlab.com/nokoe/classicl#ddd6bd81b29e9b9efe103ccea94eccd0138f1232"
 dependencies = [
  "classicl_derive",
  "classicl_packet",
@@ -85,7 +85,7 @@ dependencies = [
 [[package]]
 name = "classicl_derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#5ec5092737d268dc49b902b8834f553939d93ef4"
+source = "git+https://gitlab.com/nokoe/classicl#ddd6bd81b29e9b9efe103ccea94eccd0138f1232"
 dependencies = [
  "quote",
  "syn",
@@ -94,7 +94,7 @@ dependencies = [
 [[package]]
 name = "classicl_packet"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#5ec5092737d268dc49b902b8834f553939d93ef4"
+source = "git+https://gitlab.com/nokoe/classicl#ddd6bd81b29e9b9efe103ccea94eccd0138f1232"
 dependencies = [
  "classicl_serde",
  "serde",
@@ -104,7 +104,7 @@ dependencies = [
 [[package]]
 name = "classicl_serde"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#5ec5092737d268dc49b902b8834f553939d93ef4"
+source = "git+https://gitlab.com/nokoe/classicl#ddd6bd81b29e9b9efe103ccea94eccd0138f1232"
 dependencies = [
  "classicl_derive",
  "serde",
@@ -115,7 +115,7 @@ name = "classicl_server"
 version = "0.1.0"
 dependencies = [
  "classicl",
- "libflate",
+ "flate2",
  "noise",
  "tokio",
 ]
@@ -232,6 +232,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
 
 [[package]]
+name = "flate2"
+version = "1.0.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f82b0f4c27ad9f8bfd1f3208d882da2b09c301bc1c828fd3a00d0216d2fbbff6"
+dependencies = [
+ "crc32fast",
+ "miniz_oxide 0.5.3",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,26 +347,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349d5a591cd28b49e1d1037471617a32ddcda5731b99419008085f72d5a53836"
 
 [[package]]
-name = "libflate"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05605ab2bce11bcfc0e9c635ff29ef8b2ea83f29be257ee7d730cac3ee373093"
-dependencies = [
- "adler32",
- "crc32fast",
- "libflate_lz77",
-]
-
-[[package]]
-name = "libflate_lz77"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39a734c0493409afcd49deee13c006a04e3586b9761a03543c6272c9c51f2f5a"
-dependencies = [
- "rle-decode-fast",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -407,6 +397,15 @@ checksum = "a92518e98c078586bc6c934028adcca4c92a53d6a958196de835170a01d84e4b"
 dependencies = [
  "adler",
  "autocfg",
+]
+
+[[package]]
+name = "miniz_oxide"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f5c75688da582b8ffc1f1799e9db273f32133c49e048f614d22ec3256773ccc"
+dependencies = [
+ "adler",
 ]
 
 [[package]]
@@ -547,9 +546,9 @@ checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.40"
+version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd96a1e8ed2596c337f8eae5f24924ec83f5ad5ab21ea8e455d3566c69fbcaf7"
+checksum = "c278e965f1d8cf32d6e0e96de3d3e79712178ae67986d9cf9151f51e95aac89b"
 dependencies = [
  "unicode-ident",
 ]
@@ -639,18 +638,12 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "534cfe58d6a18cc17120fbf4635d53d14691c1fe4d951064df9bd326178d7d5a"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
 dependencies = [
  "bitflags",
 ]
-
-[[package]]
-name = "rle-decode-fast"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
 
 [[package]]
 name = "ryu"
@@ -796,9 +789,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.20.0"
+version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57aec3cfa4c296db7255446efb4928a6be304b431a806216105542a67b6ca82e"
+checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
 dependencies = [
  "autocfg",
  "bytes",

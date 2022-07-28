@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 classicl = { git = "https://gitlab.com/nokoe/classicl" }
 tokio = { version = "1.20.0", features = ["full"] }
-libflate = "1.2.0"
+flate2 = "1.0.24"
 noise = "0.7.0"

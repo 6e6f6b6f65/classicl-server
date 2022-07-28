@@ -1,4 +1,4 @@
-use classicl::{client, server::*, ClientController};
+use classicl::{client, server::*, ClientController, Packet};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -17,7 +17,7 @@ async fn main() {
     let pdb: Arc<Mutex<HashMap<i8, Player>>> = Arc::new(Mutex::new(HashMap::new()));
     let pq = Arc::new(Mutex::new(HashMap::new()));
 
-    let terrain = Arc::new(Mutex::new(Terrain::new((100, 32, 100))));
+    let terrain = Arc::new(Mutex::new(Terrain::new((256, 32, 256))));
 
     let players = pq.clone();
     let map = terrain.clone();
@@ -30,18 +30,6 @@ async fn main() {
         .on_client_connected(move |_s, id, c| {
             let mut players = players.lock().unwrap();
             players.insert(id, c.clone());
-
-            c.write_packet(&LevelInitialize {}).unwrap();
-            for i in &map.lock().unwrap().to_chunks() {
-                c.write_packet(i).unwrap();
-            }
-
-            c.write_packet(&LevelFinalize {
-                x_size: 100,
-                y_size: 32,
-                z_size: 100,
-            })
-            .unwrap();
 
             c.write_packet(&Message {
                 player_id: 0,
@@ -66,6 +54,21 @@ async fn main() {
                     yaw: 0,
                     pitch: 0,
                 };
+
+                c.write_packet(&LevelInitialize {}).unwrap();
+                let mut buf = vec![];
+                for i in &map.lock().unwrap().to_chunks() {
+                    buf.push(LevelDataChunk::ID);
+                    buf.append(&mut classicl::to_bytes(i).unwrap());
+                }
+                c.write_bytes(buf);
+
+                c.write_packet(&LevelFinalize {
+                    x_size: 256,
+                    y_size: 32,
+                    z_size: 256,
+                })
+                .unwrap();
 
                 for (pid, p) in players.iter() {
                     p.c.write_packet(&player.to_spawn(id)).unwrap();
