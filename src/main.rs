@@ -17,7 +17,9 @@ async fn main() {
     let pdb: Arc<Mutex<HashMap<i8, Player>>> = Arc::new(Mutex::new(HashMap::new()));
     let pq = Arc::new(Mutex::new(HashMap::new()));
 
-    let terrain = Arc::new(Mutex::new(Terrain::new((256, 32, 256))));
+    println!("Generating Terrain...");
+    let terrain = Arc::new(Mutex::new(Terrain::new((1024, 32, 1024))));
+    println!("done.");
 
     let players = pq.clone();
     let map = terrain.clone();
@@ -64,9 +66,9 @@ async fn main() {
                 c.write_bytes(buf);
 
                 c.write_packet(&LevelFinalize {
-                    x_size: 256,
+                    x_size: 1024,
                     y_size: 32,
-                    z_size: 256,
+                    z_size: 1024,
                 })
                 .unwrap();
 
