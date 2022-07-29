@@ -73,7 +73,7 @@ use std::io::Write;
 
 use classicl::server::LevelDataChunk;
 use flate2::{Compression, write::GzEncoder as Enc};
-use noise::{Add, Constant, NoiseFn, ScalePoint, SuperSimplex};
+use noise::{Add, Constant, NoiseFn, ScalePoint, SuperSimplex, ScaleBias};
 
 pub struct TerrainNoise {
     height: SuperSimplex,
@@ -89,12 +89,14 @@ impl TerrainNoise {
     }
 
     pub fn height(&self, x: i16, y: i16) -> f64 {
+        let mut noise = ScaleBias::new(&self.height);
+        noise.scale = 15.0;
         let h = Constant::new(20.0);
-        let added = Add::new(&self.height, &h);
-        let mut noise = ScalePoint::new(added);
-        noise.x_scale = 0.1;
-        noise.y_scale = 0.1;
-        noise.z_scale = 0.1;
+        let noise = Add::new(&noise, &h);
+        let mut noise = ScalePoint::new(noise);
+        noise.x_scale = 0.02;
+        noise.y_scale = 0.02;
+        noise.z_scale = 0.02;
         noise.get([x as f64, y as f64])
     }
 
@@ -131,7 +133,7 @@ impl Terrain {
                     if y as f64 > h {
                         buf.push(Blocks::Air as u8);
                     } else {
-                        if noise.cave(x, y, z) > 0.05 {
+                        if noise.cave(x, y, z) > 0.005 {
                             if h.floor() as i16 - y > 5 {
                                 buf.push(Blocks::Stone as u8);
                             } else if h.floor() as i16 - y > 0 {
