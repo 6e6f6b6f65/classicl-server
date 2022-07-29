@@ -57,20 +57,22 @@ async fn main() {
                     pitch: 0,
                 };
 
-                c.write_packet(&LevelInitialize {}).unwrap();
                 let mut buf = vec![];
+                buf.push(LevelInitialize::ID);
+                buf.append(&mut (classicl::to_bytes(&LevelInitialize {}).unwrap()));
                 for i in &map.lock().unwrap().to_chunks() {
                     buf.push(LevelDataChunk::ID);
                     buf.append(&mut classicl::to_bytes(i).unwrap());
                 }
-                c.write_bytes(buf);
 
-                c.write_packet(&LevelFinalize {
+                buf.push(LevelFinalize::ID);
+                buf.append(&mut classicl::to_bytes(&LevelFinalize {
                     x_size: 1024,
                     y_size: 32,
                     z_size: 1024,
                 })
-                .unwrap();
+                .unwrap());
+                c.write_bytes(buf);
 
                 for (pid, p) in players.iter() {
                     p.c.write_packet(&player.to_spawn(id)).unwrap();

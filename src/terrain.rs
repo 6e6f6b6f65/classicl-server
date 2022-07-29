@@ -2,8 +2,8 @@ pub enum Blocks {
     Air = 0,
     Stone = 1,
     Grass = 2,
-    /*
     Dirt = 3,
+    /*
     Cobblestone = 4,
     Wood = 5,
     Sapling = 6,
@@ -134,6 +134,8 @@ impl Terrain {
                         if noise.cave(x, y, z) > 0.05 {
                             if h.floor() as i16 - y > 5 {
                                 buf.push(Blocks::Stone as u8);
+                            } else if h.floor() as i16 - y > 0 {
+                                buf.push(Blocks::Dirt as u8)
                             } else {
                                 buf.push(Blocks::Grass as u8)
                             }
