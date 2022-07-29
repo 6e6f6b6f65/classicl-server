@@ -29,7 +29,8 @@ async fn main() {
         to_fixed_point(10.0),
     );
     server
-        .on_client_connected(move |_s, id, c| {
+        .on_client_connected(move |s, id, c| {
+            println!("{s} connected.");
             let mut players = players.lock().unwrap();
             players.insert(id, c.clone());
 
