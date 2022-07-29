@@ -14,9 +14,11 @@ pub enum Blocks {
     StillLava = 11,
     Sand = 12,
     Gravel = 13,
+    */
     GoldOre = 14,
     IronOre = 15,
     CoalOre = 16,
+    /*
     Log = 17,
     Leaves = 18,
     Sponge = 19,
@@ -73,18 +75,23 @@ use std::io::Write;
 
 use classicl::server::LevelDataChunk;
 use flate2::{Compression, write::GzEncoder as Enc};
-use noise::{Add, Constant, NoiseFn, ScalePoint, SuperSimplex, ScaleBias};
+use noise::{Add, Constant, NoiseFn, ScalePoint, ScaleBias, SuperSimplex, Fbm};
 
 pub struct TerrainNoise {
     height: SuperSimplex,
-    caves: SuperSimplex,
+    caves: Fbm,
+    ores: SuperSimplex,
 }
 
 impl TerrainNoise {
     pub fn new() -> Self {
+        let mut caves = Fbm::new();
+        caves.octaves = 1;
+        caves.lacunarity = 1.0;
         Self {
             height: SuperSimplex::new(),
-            caves: SuperSimplex::new(),
+            caves,
+            ores: SuperSimplex::new(),
         }
     }
 
@@ -101,11 +108,15 @@ impl TerrainNoise {
     }
 
     pub fn cave(&self, x: i16, y: i16, z: i16) -> f64 {
-        let mut noise = ScalePoint::new(self.caves);
-        noise.x_scale = 0.1;
-        noise.y_scale = 0.1;
-        noise.z_scale = 0.1;
+        let mut noise = ScalePoint::new(&self.caves);
+        noise.x_scale = 0.125;
+        noise.y_scale = 0.125;
+        noise.z_scale = 0.125;
         noise.get([x as f64, y as f64, z as f64])
+    }
+
+    pub fn ore(&self, x: i16, y: i16, z: i16) -> f64 {
+        self.ores.get([x as f64, y as f64, z as f64])
     }
 }
 
@@ -133,16 +144,25 @@ impl Terrain {
                     if y as f64 > h {
                         buf.push(Blocks::Air as u8);
                     } else {
-                        if noise.cave(x, y, z) > 0.005 {
+                        if noise.cave(x, y, z) > 0.3 {
+                            buf.push(Blocks::Air as u8);
+                        } else {
                             if h.floor() as i16 - y > 5 {
-                                buf.push(Blocks::Stone as u8);
+                                let ore = noise.ore(x, y, z);
+                                if ore > 0.9 {
+                                    buf.push(Blocks::GoldOre as u8)
+                                } else if ore > 0.8 {
+                                    buf.push(Blocks::IronOre as u8)
+                                } else if ore > 0.7 {
+                                    buf.push(Blocks::CoalOre as u8)
+                                } else {
+                                    buf.push(Blocks::Stone as u8)
+                                }
                             } else if h.floor() as i16 - y > 0 {
                                 buf.push(Blocks::Dirt as u8)
                             } else {
                                 buf.push(Blocks::Grass as u8)
                             }
-                        } else {
-                            buf.push(Blocks::Air as u8);
                         }
                     }
                 }
