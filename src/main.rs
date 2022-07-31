@@ -67,12 +67,14 @@ async fn main() {
                 }
 
                 buf.push(LevelFinalize::ID);
-                buf.append(&mut classicl::to_bytes(&LevelFinalize {
-                    x_size: 1024,
-                    y_size: 32,
-                    z_size: 1024,
-                })
-                .unwrap());
+                buf.append(
+                    &mut classicl::to_bytes(&LevelFinalize {
+                        x_size: 1024,
+                        y_size: 32,
+                        z_size: 1024,
+                    })
+                    .unwrap(),
+                );
                 c.write_bytes(buf);
 
                 for (pid, p) in players.iter() {
@@ -129,8 +131,26 @@ async fn main() {
         .await;
 
     let players = pdb.clone();
-    let queue = pq.clone();
+    server
+        .on_message(move |id, m| {
+            let mut players = players.lock().unwrap();
 
+            if let Some(player) = players.get(&id) {
+                let mut message = format!("&7{}:&f {}", player.player_name.trim(), m.message);
+                message.truncate(1024);
+                for (_, p) in players.iter_mut() {
+                    p.c.write_packet(&Message {
+                        player_id: id,
+                        message: message.clone(),
+                    })
+                    .unwrap();
+                }
+            }
+        })
+        .await;
+
+    let players = pdb.clone();
+    let queue = pq.clone();
     server
         .on_client_disconnected(move |id| {
             let _ = players.lock().unwrap().remove(&id);

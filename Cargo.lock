@@ -72,7 +72,7 @@ dependencies = [
 [[package]]
 name = "classicl"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#3d2f509ca47d3e641d6dcc005892101f60c3cf14"
+source = "git+https://gitlab.com/nokoe/classicl#e496ed1652f5f6b9b430aa63685359440c282763"
 dependencies = [
  "classicl_derive",
  "classicl_packet",
@@ -85,7 +85,7 @@ dependencies = [
 [[package]]
 name = "classicl_derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#3d2f509ca47d3e641d6dcc005892101f60c3cf14"
+source = "git+https://gitlab.com/nokoe/classicl#e496ed1652f5f6b9b430aa63685359440c282763"
 dependencies = [
  "quote",
  "syn",
@@ -94,7 +94,7 @@ dependencies = [
 [[package]]
 name = "classicl_packet"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#3d2f509ca47d3e641d6dcc005892101f60c3cf14"
+source = "git+https://gitlab.com/nokoe/classicl#e496ed1652f5f6b9b430aa63685359440c282763"
 dependencies = [
  "classicl_serde",
  "serde",
@@ -104,7 +104,7 @@ dependencies = [
 [[package]]
 name = "classicl_serde"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#3d2f509ca47d3e641d6dcc005892101f60c3cf14"
+source = "git+https://gitlab.com/nokoe/classicl#e496ed1652f5f6b9b430aa63685359440c282763"
 dependencies = [
  "classicl_derive",
  "serde",
