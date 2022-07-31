@@ -40,7 +40,9 @@ pub enum Blocks {
     Gray = 35,
     White = 36,
     Dandelion = 37,
+    */
     Rose = 38,
+    /*
     BrownMushroom = 39,
     RedMushroom = 40,
     Gold = 41,
@@ -85,6 +87,7 @@ pub struct TerrainNoise {
     ores: SuperSimplex,
     trees: SuperSimplex,
     tree_height: Worley,
+    roses: SuperSimplex,
 }
 
 impl TerrainNoise {
@@ -98,6 +101,7 @@ impl TerrainNoise {
             ores: SuperSimplex::new(),
             trees: SuperSimplex::new(),
             tree_height: Worley::new(),
+            roses: SuperSimplex::new(),
         }
     }
 
@@ -137,7 +141,14 @@ impl TerrainNoise {
         let h = self.height(x, z).floor();
         if trees.get([x as f64, z as f64, h]) > 0.8 && y as f64 - h < tree_h {
             Blocks::Log
-        } else {
+        } else if h as i16 + 1 == y {
+            if self.roses.get([x as f64, z as f64]) > 0.7 {
+                Blocks::Rose
+            } else {
+                Blocks::Air
+            }
+        }
+        else {
             Blocks::Air
         }
     }
