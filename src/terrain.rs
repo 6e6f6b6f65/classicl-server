@@ -18,8 +18,8 @@ pub enum Blocks {
     GoldOre = 14,
     IronOre = 15,
     CoalOre = 16,
-    /*
     Log = 17,
+    /*
     Leaves = 18,
     Sponge = 19,
     Glass = 20,
@@ -71,16 +71,20 @@ pub enum Blocks {
     */
 }
 
+const CAVE_THRESHOLD: f64 = 0.3;
+
 use std::io::Write;
 
 use classicl::server::LevelDataChunk;
 use flate2::{Compression, write::GzEncoder as Enc};
-use noise::{Add, Constant, NoiseFn, ScalePoint, ScaleBias, SuperSimplex, Fbm};
+use noise::{Add, Constant, NoiseFn, ScalePoint, ScaleBias, SuperSimplex, Fbm, Abs, Worley};
 
 pub struct TerrainNoise {
     height: SuperSimplex,
     caves: Fbm,
     ores: SuperSimplex,
+    trees: SuperSimplex,
+    tree_height: Worley,
 }
 
 impl TerrainNoise {
@@ -92,6 +96,8 @@ impl TerrainNoise {
             height: SuperSimplex::new(),
             caves,
             ores: SuperSimplex::new(),
+            trees: SuperSimplex::new(),
+            tree_height: Worley::new(),
         }
     }
 
@@ -118,6 +124,23 @@ impl TerrainNoise {
     pub fn ore(&self, x: i16, y: i16, z: i16) -> f64 {
         self.ores.get([x as f64, y as f64, z as f64])
     }
+
+    pub fn ground(&self, x: i16, y: i16, z: i16) -> Blocks {
+        let mut tree_height = ScaleBias::new(&self.tree_height);
+        tree_height.scale = 5.0;
+        let tree_height = Abs::new(&tree_height);
+        let tree_h = tree_height.get([x as f64, z as f64]);
+        let mut trees = ScalePoint::new(&self.trees);
+        trees.x_scale = 10.0;
+        trees.y_scale = 10.0;
+        trees.z_scale = 10.0;
+        let h = self.height(x, z).floor();
+        if trees.get([x as f64, z as f64, h]) > 0.8 && y as f64 - h < tree_h {
+            Blocks::Log
+        } else {
+            Blocks::Air
+        }
+    }
 }
 
 pub struct Terrain {
@@ -142,9 +165,9 @@ impl Terrain {
                 for z in 0..z {
                     let h = noise.height(x, z);
                     if y as f64 > h {
-                        buf.push(Blocks::Air as u8);
+                        buf.push(noise.ground(x, y, z) as u8);
                     } else {
-                        if noise.cave(x, y, z) > 0.3 {
+                        if noise.cave(x, y, z) > CAVE_THRESHOLD {
                             buf.push(Blocks::Air as u8);
                         } else {
                             if h.floor() as i16 - y > 5 {
@@ -194,9 +217,13 @@ impl Terrain {
 
     pub fn set_block(&mut self, x: i16, y: i16, z: i16, t: u8) {
         let (x_size, _, z_size) = self.size;
-        let index = x as usize + x_size as usize * (z as usize + z_size as usize * y as usize);
+        let index = index(x_size, z_size, x, y, z);
         if let Some(v) = self.inner.get_mut(index) {
             *v = t;
         }
     }
+}
+
+fn index(x_size: i16, z_size: i16, x: i16, y: i16, z: i16) -> usize {
+    x as usize + x_size as usize * (z as usize + z_size as usize * y as usize)
 }
