@@ -137,7 +137,7 @@ async fn main() {
 
             if let Some(player) = players.get(&id) {
                 let mut message = format!("&7{}:&f {}", player.player_name.trim(), m.message);
-                message.truncate(1024);
+                message.truncate(64);
                 for (_, p) in players.iter_mut() {
                     p.c.write_packet(&Message {
                         player_id: id,
