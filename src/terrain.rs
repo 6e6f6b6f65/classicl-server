@@ -78,8 +78,8 @@ const CAVE_THRESHOLD: f64 = 0.3;
 use std::io::Write;
 
 use classicl::server::LevelDataChunk;
-use flate2::{Compression, write::GzEncoder as Enc};
-use noise::{Add, Constant, NoiseFn, ScalePoint, ScaleBias, SuperSimplex, Fbm, Abs, Worley};
+use flate2::{write::GzEncoder as Enc, Compression};
+use noise::{Abs, Add, Constant, Fbm, NoiseFn, ScaleBias, ScalePoint, SuperSimplex, Worley};
 
 pub struct TerrainNoise {
     height: SuperSimplex,
@@ -147,8 +147,7 @@ impl TerrainNoise {
             } else {
                 Blocks::Air
             }
-        }
-        else {
+        } else {
             Blocks::Air
         }
     }
@@ -177,27 +176,23 @@ impl Terrain {
                     let h = noise.height(x, z);
                     if y as f64 > h {
                         buf.push(noise.ground(x, y, z) as u8);
-                    } else {
-                        if noise.cave(x, y, z) > CAVE_THRESHOLD {
-                            buf.push(Blocks::Air as u8);
+                    } else if noise.cave(x, y, z) > CAVE_THRESHOLD {
+                        buf.push(Blocks::Air as u8);
+                    } else if h.floor() as i16 - y > 5 {
+                        let ore = noise.ore(x, y, z);
+                        if ore > 0.9 {
+                            buf.push(Blocks::GoldOre as u8)
+                        } else if ore > 0.8 {
+                            buf.push(Blocks::IronOre as u8)
+                        } else if ore > 0.7 {
+                            buf.push(Blocks::CoalOre as u8)
                         } else {
-                            if h.floor() as i16 - y > 5 {
-                                let ore = noise.ore(x, y, z);
-                                if ore > 0.9 {
-                                    buf.push(Blocks::GoldOre as u8)
-                                } else if ore > 0.8 {
-                                    buf.push(Blocks::IronOre as u8)
-                                } else if ore > 0.7 {
-                                    buf.push(Blocks::CoalOre as u8)
-                                } else {
-                                    buf.push(Blocks::Stone as u8)
-                                }
-                            } else if h.floor() as i16 - y > 0 {
-                                buf.push(Blocks::Dirt as u8)
-                            } else {
-                                buf.push(Blocks::Grass as u8)
-                            }
+                            buf.push(Blocks::Stone as u8)
                         }
+                    } else if h.floor() as i16 - y > 0 {
+                        buf.push(Blocks::Dirt as u8)
+                    } else {
+                        buf.push(Blocks::Grass as u8)
                     }
                 }
             }
@@ -207,7 +202,8 @@ impl Terrain {
 
     pub fn to_chunks(&self) -> Vec<LevelDataChunk> {
         let mut e = Enc::new(Vec::new(), Compression::fast());
-        let size: [u8; 4] = (self.size.0 as u32 * self.size.1 as u32 * self.size.2 as u32).to_be_bytes();
+        let size: [u8; 4] =
+            (self.size.0 as u32 * self.size.1 as u32 * self.size.2 as u32).to_be_bytes();
         e.write_all(&size).unwrap();
         e.write_all(&self.inner).unwrap();
         let data = e.finish().unwrap();

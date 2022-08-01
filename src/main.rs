@@ -58,8 +58,7 @@ async fn main() {
                     pitch: 0,
                 };
 
-                let mut buf = vec![];
-                buf.push(LevelInitialize::ID);
+                let mut buf = vec![LevelInitialize::ID];
                 buf.append(&mut (classicl::to_bytes(&LevelInitialize {}).unwrap()));
                 for i in &map.lock().unwrap().to_chunks() {
                     buf.push(LevelDataChunk::ID);
