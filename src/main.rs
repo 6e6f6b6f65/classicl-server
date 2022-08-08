@@ -1,9 +1,13 @@
 use classicl::{client, server::*, ClientController, Packet};
-use tokio::time;
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex}, path::{Path, PathBuf}, fs::File, io::Write, time::Duration,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    time::Duration,
 };
+use tokio::time;
 
 use crate::{cli::Cli, terrain::Terrain};
 use clap::Parser;
@@ -27,9 +31,7 @@ async fn main() {
         bincode::deserialize_from(file).unwrap()
     } else {
         println!("Generating Terrain...");
-        Terrain::new((
-            cli.x_size, cli.y_size, cli.z_size,
-        ))
+        Terrain::new((cli.x_size, cli.y_size, cli.z_size))
     }));
     println!("done.");
 
@@ -180,13 +182,15 @@ async fn main() {
         })
         .await;
 
-
+    let players = pdb.clone();
     let map = terrain.clone();
     let opt = cli.clone();
     tokio::spawn(async move {
         loop {
             time::sleep(Duration::from_secs(300)).await;
-            save_map(opt.clone(), map.clone());
+            if !players.lock().unwrap().is_empty() {
+                save_map(opt.clone(), map.clone());
+            }
         }
     });
 
@@ -194,7 +198,7 @@ async fn main() {
     let cli = cli.clone();
     let ctrl_c = tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
-        println!("Saving map and stopping server now.");
+        println!("\nSaving map and stopping server now.");
         save_map(cli, map);
     });
 
