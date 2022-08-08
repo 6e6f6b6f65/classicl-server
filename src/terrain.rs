@@ -77,9 +77,14 @@ const CAVE_THRESHOLD: f64 = 0.3;
 
 use std::io::Write;
 
-use classicl::server::LevelDataChunk;
+use classicl::{server::LevelDataChunk, Serialize};
 use flate2::{write::GzEncoder as Enc, Compression};
 use noise::{Abs, Add, Constant, Fbm, NoiseFn, ScaleBias, ScalePoint, SuperSimplex, Worley};
+use serde::Deserialize;
+
+use crate::PLAYER_HEIGHT;
+
+use crate::to_fixed_point;
 
 pub struct TerrainNoise {
     height: SuperSimplex,
@@ -153,8 +158,10 @@ impl TerrainNoise {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Terrain {
-    size: (i16, i16, i16),
+    pub size: (i16, i16, i16),
+    pub spawn_point: (i16, i16, i16),
     inner: Vec<u8>,
 }
 
@@ -162,6 +169,9 @@ impl Terrain {
     pub fn new(size: (i16, i16, i16)) -> Self {
         Self {
             size,
+            spawn_point: (to_fixed_point(10.0),
+            to_fixed_point(TerrainNoise::new().height(10, 10)) + PLAYER_HEIGHT,
+            to_fixed_point(10.0),),
             inner: Self::generate(size),
         }
     }
