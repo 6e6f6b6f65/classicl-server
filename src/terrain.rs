@@ -87,6 +87,7 @@ use crate::PLAYER_HEIGHT;
 use crate::to_fixed_point;
 
 pub struct TerrainNoise {
+    h: Constant,
     height: SuperSimplex,
     caves: Fbm,
     ores: SuperSimplex,
@@ -96,11 +97,12 @@ pub struct TerrainNoise {
 }
 
 impl TerrainNoise {
-    pub fn new() -> Self {
+    pub fn new(h: f64) -> Self {
         let mut caves = Fbm::new();
         caves.octaves = 1;
         caves.lacunarity = 1.0;
         Self {
+            h: Constant::new(h),
             height: SuperSimplex::new(),
             caves,
             ores: SuperSimplex::new(),
@@ -113,8 +115,7 @@ impl TerrainNoise {
     pub fn height(&self, x: i16, y: i16) -> f64 {
         let mut noise = ScaleBias::new(&self.height);
         noise.scale = 15.0;
-        let h = Constant::new(20.0);
-        let noise = Add::new(&noise, &h);
+        let noise = Add::new(&noise, &self.h);
         let mut noise = ScalePoint::new(noise);
         noise.x_scale = 0.02;
         noise.y_scale = 0.02;
@@ -166,18 +167,18 @@ pub struct Terrain {
 }
 
 impl Terrain {
-    pub fn new(size: (i16, i16, i16)) -> Self {
+    pub fn new(size: (i16, i16, i16), height: f64) -> Self {
         Self {
             size,
             spawn_point: (to_fixed_point(10.0),
-            to_fixed_point(TerrainNoise::new().height(10, 10)) + PLAYER_HEIGHT,
+            to_fixed_point(TerrainNoise::new(height).height(10, 10)) + PLAYER_HEIGHT,
             to_fixed_point(10.0),),
-            inner: Self::generate(size),
+            inner: Self::generate(size, height),
         }
     }
 
-    fn generate(size: (i16, i16, i16)) -> Vec<u8> {
-        let noise = TerrainNoise::new();
+    fn generate(size: (i16, i16, i16), height: f64) -> Vec<u8> {
+        let noise = TerrainNoise::new(height);
         let (x, y, z) = size;
         let mut buf = vec![];
         for y in 0..y {
