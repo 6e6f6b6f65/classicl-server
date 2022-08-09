@@ -62,12 +62,6 @@ async fn main() {
             .unwrap();
             let mut players = players.lock().unwrap();
             players.insert(id, c.clone());
-
-            c.write_packet(&Message {
-                player_id: 0,
-                message: "Welcome".to_string(),
-            })
-            .unwrap();
         })
         .await;
 
@@ -173,7 +167,9 @@ async fn main() {
             if let Some(player) = players.get(&id) {
                 let message: &str = m.message.trim();
 
+                // Commands
                 if message.starts_with('/') {
+                    // Message is definitley 64 chars, so doing this should never panic.
                     if let Some(cmd) = Commands::from_str(&message[1..]) {
                         match cmd {
                             Commands::Tp(other_p) => {
