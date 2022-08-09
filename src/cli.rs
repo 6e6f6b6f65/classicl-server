@@ -10,7 +10,7 @@ pub struct Cli {
    pub adress: String,
 
    /// x size
-   #[clap(short, long, value_parser = clap::value_parser!(i16).range(1..), default_value_t = 256)]
+   #[clap(short, long, value_parser = clap::value_parser!(i16).range(1..), default_value_t = 128)]
    pub x_size: i16,
 
    /// y size
@@ -18,7 +18,7 @@ pub struct Cli {
    pub y_size: i16,
 
    /// x size
-   #[clap(short, long, value_parser = clap::value_parser!(i16).range(1..), default_value_t = 256)]
+   #[clap(short, long, value_parser = clap::value_parser!(i16).range(1..), default_value_t = 128)]
    pub z_size: i16,
 
    /// Ground height

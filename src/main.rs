@@ -27,6 +27,7 @@ async fn main() {
         .init()
         .unwrap();
     let cli = Arc::new(Cli::parse());
+    std::fs::DirBuilder::new().recursive(true).create(&cli.data).unwrap();
     let mut server = classicl::Server::new(&cli.adress).await.unwrap();
 
     let pdb: Arc<Mutex<HashMap<i8, Player>>> = Arc::new(Mutex::new(HashMap::new()));
