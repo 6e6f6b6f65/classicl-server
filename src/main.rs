@@ -1,4 +1,5 @@
 use classicl::{client, server::*, ClientController, Packet};
+use log::{info, debug};
 use std::{
     collections::HashMap,
     fs::File,
@@ -19,6 +20,7 @@ const PLAYER_HEIGHT: i16 = 51 * 2;
 
 #[tokio::main]
 async fn main() {
+    simple_logger::SimpleLogger::new().with_colors(true).with_level(log::LevelFilter::Info).env().init().unwrap();
     let cli = Arc::new(Cli::parse());
     let mut server = classicl::Server::new(&cli.adress).await.unwrap();
 
@@ -27,19 +29,18 @@ async fn main() {
 
     let path = generate_path(&cli.data);
     let terrain = Arc::new(Mutex::new(if let Ok(file) = File::open(path) {
-        println!("Loading Terrain...");
+        info!("Loading Terrain...");
         bincode::deserialize_from(file).unwrap()
     } else {
-        println!("Generating Terrain...");
+        info!("Generating Terrain...");
         Terrain::new((cli.x_size, cli.y_size, cli.z_size), cli.height)
     }));
-    println!("done.");
 
     let players = pq.clone();
 
     let opt = cli.clone();
     server
-        .on_client_connected(move |s, id, c| {
+        .on_client_connected(move |_, id, c| {
             c.write_packet(&ServerIdentification {
                 protocol_version: 0x07,
                 server_name: opt.name.clone(),
@@ -47,7 +48,6 @@ async fn main() {
                 user_type: 0x00,
             })
             .unwrap();
-            println!("{s} connected.");
             let mut players = players.lock().unwrap();
             players.insert(id, c.clone());
 
@@ -76,6 +76,8 @@ async fn main() {
                     yaw: 0,
                     pitch: 0,
                 };
+
+                info!("{id} identified as {}", p.username.trim());
 
                 let mut buf = vec![LevelInitialize::ID];
                 {
@@ -157,7 +159,8 @@ async fn main() {
             let mut players = players.lock().unwrap();
 
             if let Some(player) = players.get(&id) {
-                let mut message = format!("&7{}:&f {}", player.player_name.trim(), m.message);
+                let mut message = format!("&7{}:&f {}", player.player_name.trim(), m.message.trim());
+                info!("{} wrote: {}", player.player_name.trim(), m.message.trim());
                 message.truncate(64);
                 for (_, p) in players.iter_mut() {
                     p.c.write_packet(&Message {
@@ -189,6 +192,7 @@ async fn main() {
         loop {
             time::sleep(Duration::from_secs(300)).await;
             if !players.lock().unwrap().is_empty() {
+                debug!("Trying to save the map.");
                 save_map(opt.clone(), map.clone());
             }
         }
@@ -198,7 +202,7 @@ async fn main() {
     let cli = cli.clone();
     let ctrl_c = tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
-        println!("\nSaving map and stopping server now.");
+        info!("\nSaving map and stopping server now.");
         save_map(cli, map);
     });
 
