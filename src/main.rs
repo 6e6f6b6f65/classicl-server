@@ -1,5 +1,5 @@
 use classicl::{client, server::*, ClientController, Packet};
-use log::{info, debug};
+use log::{debug, info};
 use std::{
     collections::HashMap,
     fs::File,
@@ -20,7 +20,12 @@ const PLAYER_HEIGHT: i16 = 51 * 2;
 
 #[tokio::main]
 async fn main() {
-    simple_logger::SimpleLogger::new().with_colors(true).with_level(log::LevelFilter::Info).env().init().unwrap();
+    simple_logger::SimpleLogger::new()
+        .with_colors(true)
+        .with_level(log::LevelFilter::Info)
+        .env()
+        .init()
+        .unwrap();
     let cli = Arc::new(Cli::parse());
     let mut server = classicl::Server::new(&cli.adress).await.unwrap();
 
@@ -159,7 +164,8 @@ async fn main() {
             let mut players = players.lock().unwrap();
 
             if let Some(player) = players.get(&id) {
-                let mut message = format!("&7{}:&f {}", player.player_name.trim(), m.message.trim());
+                let mut message =
+                    format!("&7{}:&f {}", player.player_name.trim(), m.message.trim());
                 info!("{} wrote: {}", player.player_name.trim(), m.message.trim());
                 message.truncate(64);
                 for (_, p) in players.iter_mut() {
@@ -202,7 +208,7 @@ async fn main() {
     let cli = cli.clone();
     let ctrl_c = tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
-        info!("\nSaving map and stopping server now.");
+        info!("Saving map and stopping server now.");
         save_map(cli, map);
     });
 
