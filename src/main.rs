@@ -41,6 +41,8 @@ async fn main() {
         Terrain::new((cli.x_size, cli.y_size, cli.z_size), cli.height)
     }));
 
+    info!("Terrain ready.");
+
     let players = pq.clone();
 
     let opt = cli.clone();
