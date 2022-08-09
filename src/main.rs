@@ -10,10 +10,11 @@ use std::{
 };
 use tokio::time;
 
-use crate::{cli::Cli, terrain::Terrain};
+use crate::{cli::Cli, commands::Commands, terrain::Terrain};
 use clap::Parser;
 
 mod cli;
+mod commands;
 mod terrain;
 
 const PLAYER_HEIGHT: i16 = 51 * 2;
@@ -27,7 +28,10 @@ async fn main() {
         .init()
         .unwrap();
     let cli = Arc::new(Cli::parse());
-    std::fs::DirBuilder::new().recursive(true).create(&cli.data).unwrap();
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .create(&cli.data)
+        .unwrap();
     let mut server = classicl::Server::new(&cli.adress).await.unwrap();
 
     let pdb: Arc<Mutex<HashMap<i8, Player>>> = Arc::new(Mutex::new(HashMap::new()));
@@ -167,16 +171,53 @@ async fn main() {
             let mut players = players.lock().unwrap();
 
             if let Some(player) = players.get(&id) {
-                let mut message =
-                    format!("&7{}:&f {}", player.player_name.trim(), m.message.trim());
-                info!("{} wrote: {}", player.player_name.trim(), m.message.trim());
-                message.truncate(64);
-                for (_, p) in players.iter_mut() {
-                    p.c.write_packet(&Message {
-                        player_id: id,
-                        message: message.clone(),
-                    })
-                    .unwrap();
+                let message: &str = m.message.trim();
+
+                if message.starts_with('/') {
+                    if let Some(cmd) = Commands::from_str(&message[1..]) {
+                        match cmd {
+                            Commands::Tp(other_p) => {
+                                if let Some((o_id, other_p)) = players
+                                    .iter()
+                                    .find(|(_, p)| p.player_name.trim() == &other_p)
+                                {
+                                    info!("{id} teleported to {o_id}");
+                                    player
+                                        .c
+                                        .write_packet(&PositionOrientationTeleport {
+                                            player_id: -1,
+                                            x: other_p.x,
+                                            y: other_p.y,
+                                            z: other_p.z,
+                                            yaw: other_p.yaw,
+                                            pitch: 0,
+                                        })
+                                        .unwrap();
+                                } else {
+                                    debug!("{id} tried to teleport to {other_p}");
+                                    player.write_message(format!(
+                                        "&cCould not find player `{}`",
+                                        other_p
+                                    ));
+                                }
+                            }
+                        }
+                    } else {
+                        debug!("{id} tried to execute `{message}`");
+                        player.write_message(format!("&cCommand `{}` not known.", message));
+                    }
+                } else {
+                    let mut message =
+                        format!("&7{}:&f {}", player.player_name.trim(), m.message.trim());
+                    info!("{} wrote: {}", player.player_name.trim(), m.message.trim());
+                    message.truncate(64);
+                    for (_, p) in players.iter_mut() {
+                        p.c.write_packet(&Message {
+                            player_id: id,
+                            message: message.clone(),
+                        })
+                        .unwrap();
+                    }
                 }
             }
         })
@@ -264,6 +305,16 @@ impl Player {
         self.z = p.z;
         self.yaw = p.yaw;
         self.pitch = p.pitch;
+    }
+
+    pub fn write_message(&self, mut message: String) {
+        message.truncate(64);
+        self.c
+            .write_packet(&Message {
+                player_id: 0,
+                message,
+            })
+            .unwrap();
     }
 }
 
