@@ -1,24 +1,35 @@
-pub enum Commands {
+pub enum Command {
     Tp(String),
 }
 
-impl Commands {
-    pub fn from_str(s: &str) -> Option<Self> {
+impl Command {
+    pub fn from_str(s: &str) -> Result<Self, CommandError> {
         let split = s.split(' ').collect::<Vec<&str>>();
 
         if let Some(cmd) = split.get(0) {
             match *cmd {
                 "tp" => {
                     if let Some(player) = split.get(1) {
-                        Some(Self::Tp(player.to_string()))
+                        if split.get(2).is_none() {
+                            Ok(Self::Tp(player.to_string()))
+                        } else {
+                            Err(CommandError::TooManyArguments)
+                        }
                     } else {
-                        None
+                        Err(CommandError::NotEnoughArguments)
                     }
                 }
-                _ => None,
+                _ => Err(CommandError::CommandNotKnown),
             }
         } else {
-            None
+            Err(CommandError::NoCommand)
         }
     }
+}
+
+pub enum CommandError {
+    NoCommand,
+    CommandNotKnown,
+    TooManyArguments,
+    NotEnoughArguments,
 }

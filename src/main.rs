@@ -10,7 +10,7 @@ use std::{
 };
 use tokio::time;
 
-use crate::{cli::Cli, commands::Commands, terrain::Terrain};
+use crate::{cli::Cli, commands::Command, terrain::Terrain};
 use clap::Parser;
 
 mod cli;
@@ -169,10 +169,9 @@ async fn main() {
 
                 // Commands
                 if message.starts_with('/') {
-                    // Message is definitley 64 chars, so doing this should never panic.
-                    if let Some(cmd) = Commands::from_str(&message[1..]) {
-                        match cmd {
-                            Commands::Tp(other_p) => {
+                    match Command::from_str(&message[1..]) {
+                        Ok(cmd) => match cmd {
+                            Command::Tp(other_p) => {
                                 if let Some((o_id, other_p)) = players
                                     .iter()
                                     .find(|(_, p)| p.player_name.trim() == &other_p)
@@ -197,10 +196,24 @@ async fn main() {
                                     ));
                                 }
                             }
+                        },
+                        Err(e) => {
+                            debug!("{id} tried to execute `{message}`");
+                            match e {
+                                commands::CommandError::NoCommand => player.write_message(
+                                    format!("&c`{}` is not a command", message)
+                                ),
+                                commands::CommandError::CommandNotKnown => player.write_message(
+                                    format!("&c`{}` is not known", message)
+                                ),
+                                commands::CommandError::TooManyArguments => player.write_message(
+                                    format!("&c`{}` has too many arguments", message),
+                                ),
+                                commands::CommandError::NotEnoughArguments => player.write_message(
+                                    format!("&c`{}` has not enough arguments", message),
+                                ),
+                            }
                         }
-                    } else {
-                        debug!("{id} tried to execute `{message}`");
-                        player.write_message(format!("&cCommand `{}` not known.", message));
                     }
                 } else {
                     let mut message =
