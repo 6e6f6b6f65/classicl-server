@@ -19,8 +19,8 @@ pub enum Blocks {
     IronOre = 15,
     CoalOre = 16,
     Log = 17,
-    /*
     Leaves = 18,
+    /*
     Sponge = 19,
     Glass = 20,
     Red = 21,
@@ -94,6 +94,7 @@ pub struct TerrainNoise {
     trees: SuperSimplex,
     tree_height: Worley,
     roses: SuperSimplex,
+    leaves: Worley,
 }
 
 impl TerrainNoise {
@@ -109,6 +110,7 @@ impl TerrainNoise {
             trees: SuperSimplex::new(),
             tree_height: Worley::new(),
             roses: SuperSimplex::new(),
+            leaves: Worley::new(),
         }
     }
 
@@ -135,9 +137,15 @@ impl TerrainNoise {
         self.ores.get([x as f64, y as f64, z as f64])
     }
 
-    pub fn ground(&self, x: i16, y: i16, z: i16) -> Blocks {
+    pub fn ground(
+        &self,
+        x: i16,
+        y: i16,
+        z: i16,
+        tree_pos: &mut Vec<(i16, i16, i16, i16)>,
+    ) -> Blocks {
         let mut tree_height = ScaleBias::new(&self.tree_height);
-        tree_height.scale = 5.0;
+        tree_height.scale = 7.0;
         let tree_height = Abs::new(&tree_height);
         let tree_h = tree_height.get([x as f64, z as f64]);
         let mut trees = ScalePoint::new(&self.trees);
@@ -146,6 +154,11 @@ impl TerrainNoise {
         trees.z_scale = 10.0;
         let h = self.height(x, z).floor();
         if trees.get([x as f64, z as f64, h]) > 0.8 && y as f64 - h < tree_h {
+            let tree_h = tree_h as i16;
+            let h = h as i16;
+            if h + 1 == y {
+                tree_pos.push((x, z, h, tree_h));
+            }
             Blocks::Log
         } else if h as i16 + 1 == y {
             if self.roses.get([x as f64, z as f64]) > 0.7 {
@@ -156,6 +169,10 @@ impl TerrainNoise {
         } else {
             Blocks::Air
         }
+    }
+
+    pub fn leaves(&self, x: i16, y: i16, z: i16) -> f64 {
+        self.leaves.get([x.into(), y.into(), z.into()])
     }
 }
 
@@ -170,23 +187,27 @@ impl Terrain {
     pub fn new(size: (i16, i16, i16), height: f64) -> Self {
         Self {
             size,
-            spawn_point: (to_fixed_point(10.0),
-            to_fixed_point(TerrainNoise::new(height).height(10, 10)) + PLAYER_HEIGHT,
-            to_fixed_point(10.0),),
+            spawn_point: (
+                to_fixed_point(10.0),
+                to_fixed_point(TerrainNoise::new(height).height(10, 10)) + PLAYER_HEIGHT,
+                to_fixed_point(10.0),
+            ),
             inner: Self::generate(size, height),
         }
     }
 
     fn generate(size: (i16, i16, i16), height: f64) -> Vec<u8> {
+        let mut tree_pos = vec![];
         let noise = TerrainNoise::new(height);
         let (x, y, z) = size;
         let mut buf = vec![];
+
         for y in 0..y {
-            for x in 0..x {
-                for z in 0..z {
+            for z in 0..z {
+                for x in 0..x {
                     let h = noise.height(x, z);
                     if y as f64 > h {
-                        buf.push(noise.ground(x, y, z) as u8);
+                        buf.push(noise.ground(x, y, z, &mut tree_pos) as u8);
                     } else if noise.cave(x, y, z) > CAVE_THRESHOLD {
                         buf.push(Blocks::Air as u8);
                     } else if h.floor() as i16 - y > 5 {
@@ -208,6 +229,56 @@ impl Terrain {
                 }
             }
         }
+
+        for (x_pos, z_pos, y_pos, tree_h) in tree_pos {
+            for y in -2..=1 {
+                for x in -2..=2 {
+                    for z in -2..=2 {
+                        if let Some(index) =
+                            index(size.0, size.2, x + x_pos, y + tree_h + y_pos, z + z_pos)
+                        {
+                            if let Some(block) = buf.get_mut(index) {
+                                if y < 0 {
+                                    if (x == 2 || x == -2) && (z == 2 || z == -2) {
+                                        if noise.leaves(x + x_pos, y + tree_h + y_pos, z + z_pos)
+                                            > 0.3
+                                        {
+                                            if *block == Blocks::Air as u8 {
+                                                *block = Blocks::Leaves as u8;
+                                            }
+                                        }
+                                    } else {
+                                        if *block == Blocks::Air as u8 {
+                                            *block = Blocks::Leaves as u8;
+                                        }
+                                    }
+                                } else if (x < 2 && x > -2) && (z < 2 && z > -2) {
+                                    if (x == 1 || x == -1) && (z == 1 || z == -1) {
+                                        if y == 0 {
+                                            if noise.leaves(
+                                                x + x_pos,
+                                                y + tree_h + y_pos,
+                                                z + z_pos,
+                                            ) > 0.3
+                                            {
+                                                if *block == Blocks::Air as u8 {
+                                                    *block = Blocks::Leaves as u8;
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        if *block == Blocks::Air as u8 {
+                                            *block = Blocks::Leaves as u8;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         buf
     }
 
@@ -235,13 +306,20 @@ impl Terrain {
 
     pub fn set_block(&mut self, x: i16, y: i16, z: i16, t: u8) {
         let (x_size, _, z_size) = self.size;
-        let index = index(x_size, z_size, x, y, z);
-        if let Some(v) = self.inner.get_mut(index) {
-            *v = t;
+        if let Some(index) = index(x_size, z_size, x, y, z) {
+            if let Some(v) = self.inner.get_mut(index) {
+                *v = t;
+            }
         }
     }
 }
 
-fn index(x_size: i16, z_size: i16, x: i16, y: i16, z: i16) -> usize {
-    x as usize + x_size as usize * (z as usize + z_size as usize * y as usize)
+fn index(x_size: i16, z_size: i16, x: i16, y: i16, z: i16) -> Option<usize> {
+    let index = x as i64 + x_size as i64 * (z as i64 + z_size as i64 * y as i64);
+
+    if index > usize::MAX as i64 {
+        Some(index as usize)
+    } else {
+        None
+    }
 }
