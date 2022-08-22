@@ -137,37 +137,36 @@ impl TerrainNoise {
         self.ores.get([x as f64, y as f64, z as f64])
     }
 
-    pub fn ground(
-        &self,
-        x: i16,
-        y: i16,
-        z: i16,
-        tree_pos: &mut Vec<(i16, i16, i16, i16)>,
-    ) -> Blocks {
-        let mut tree_height = ScaleBias::new(&self.tree_height);
-        tree_height.scale = 7.0;
-        let tree_height = Abs::new(&tree_height);
-        let tree_h = tree_height.get([x as f64, z as f64]);
+    pub fn ground(&self, x: i16, y: i16, z: i16, tree_pos: &mut Vec<Decoration>) {
+        let h = self.height(x, z).floor();
         let mut trees = ScalePoint::new(&self.trees);
         trees.x_scale = 10.0;
         trees.y_scale = 10.0;
         trees.z_scale = 10.0;
-        let h = self.height(x, z).floor();
-        if trees.get([x as f64, z as f64, h]) > 0.8 && y as f64 - h < tree_h {
-            let tree_h = tree_h as i16;
-            let h = h as i16;
-            if h + 1 == y {
-                tree_pos.push((x, z, h, tree_h));
+        if h as i16 + 1 == y {
+            if trees.get([x as f64, z as f64, h]) > 0.8 {
+                let mut tree_height = ScaleBias::new(&self.tree_height);
+                tree_height.scale = 7.0;
+                let tree_height = Abs::new(&tree_height);
+                let tree_h = tree_height.get([x as f64, z as f64]);
+                let tree_h = tree_h as i16;
+                let h = h as i16;
+                if h + 1 == y {
+                    tree_pos.push(Decoration {
+                        x,
+                        y,
+                        z,
+                        t: DecorationType::Tree(tree_h),
+                    });
+                }
+            } else if self.roses.get([x as f64, z as f64]) > 0.7 {
+                tree_pos.push(Decoration {
+                    x,
+                    y,
+                    z,
+                    t: DecorationType::Rose,
+                });
             }
-            Blocks::Log
-        } else if h as i16 + 1 == y {
-            if self.roses.get([x as f64, z as f64]) > 0.7 {
-                Blocks::Rose
-            } else {
-                Blocks::Air
-            }
-        } else {
-            Blocks::Air
         }
     }
 
@@ -207,7 +206,8 @@ impl Terrain {
                 for x in 0..x {
                     let h = noise.height(x, z);
                     if y as f64 > h {
-                        buf.push(noise.ground(x, y, z, &mut tree_pos) as u8);
+                        noise.ground(x, y, z, &mut tree_pos);
+                        buf.push(Blocks::Air as u8);
                     } else if noise.cave(x, y, z) > CAVE_THRESHOLD {
                         buf.push(Blocks::Air as u8);
                     } else if h.floor() as i16 - y > 5 {
@@ -230,45 +230,74 @@ impl Terrain {
             }
         }
 
-        for (x_pos, z_pos, y_pos, tree_h) in tree_pos {
-            for y in -2..=1 {
-                for x in -2..=2 {
-                    for z in -2..=2 {
-                        if let Some(index) =
-                            index(size.0, size.2, x + x_pos, y + tree_h + y_pos, z + z_pos)
-                        {
+        for i in tree_pos.into_iter() {
+            let (x_pos, y_pos, z_pos) = (i.x, i.y, i.z);
+            if let Some(index) = index(size.0, size.2, x_pos, y_pos - 1, z_pos) {
+                if let Some(&block) = buf.get(index) {
+                    if block == Blocks::Air as u8 {
+                        continue;
+                    }
+                }
+            }
+            match i.t {
+                DecorationType::Rose => {
+                    if let Some(index) = index(size.0, size.2, x_pos, y_pos, z_pos) {
+                        if let Some(block) = buf.get_mut(index) {
+                            *block = Blocks::Rose as u8;
+                        }
+                    }
+                }
+                DecorationType::Tree(tree_h) => {
+                    for y in 0..=tree_h {
+                        if let Some(index) = index(size.0, size.2, x_pos, y + y_pos, z_pos) {
                             if let Some(block) = buf.get_mut(index) {
-                                if y < 0 {
-                                    if (x == 2 || x == -2) && (z == 2 || z == -2) {
-                                        if noise.leaves(x + x_pos, y + tree_h + y_pos, z + z_pos)
-                                            > 0.3
-                                        {
-                                            if *block == Blocks::Air as u8 {
-                                                *block = Blocks::Leaves as u8;
-                                            }
-                                        }
-                                    } else {
-                                        if *block == Blocks::Air as u8 {
-                                            *block = Blocks::Leaves as u8;
-                                        }
-                                    }
-                                } else if (x < 2 && x > -2) && (z < 2 && z > -2) {
-                                    if (x == 1 || x == -1) && (z == 1 || z == -1) {
-                                        if y == 0 {
-                                            if noise.leaves(
-                                                x + x_pos,
-                                                y + tree_h + y_pos,
-                                                z + z_pos,
-                                            ) > 0.3
-                                            {
+                                *block = Blocks::Log as u8;
+                            }
+                        }
+                    }
+                    for y in -2..=1 {
+                        for x in -2..=2 {
+                            for z in -2..=2 {
+                                if let Some(index) =
+                                    index(size.0, size.2, x + x_pos, y + tree_h + y_pos, z + z_pos)
+                                {
+                                    if let Some(block) = buf.get_mut(index) {
+                                        if y < 0 {
+                                            if (x == 2 || x == -2) && (z == 2 || z == -2) {
+                                                if noise.leaves(
+                                                    x + x_pos,
+                                                    y + tree_h + y_pos,
+                                                    z + z_pos,
+                                                ) > 0.3
+                                                {
+                                                    if *block == Blocks::Air as u8 {
+                                                        *block = Blocks::Leaves as u8;
+                                                    }
+                                                }
+                                            } else {
                                                 if *block == Blocks::Air as u8 {
                                                     *block = Blocks::Leaves as u8;
                                                 }
                                             }
-                                        }
-                                    } else {
-                                        if *block == Blocks::Air as u8 {
-                                            *block = Blocks::Leaves as u8;
+                                        } else if (x < 2 && x > -2) && (z < 2 && z > -2) {
+                                            if (x == 1 || x == -1) && (z == 1 || z == -1) {
+                                                if y == 0 {
+                                                    if noise.leaves(
+                                                        x + x_pos,
+                                                        y + tree_h + y_pos,
+                                                        z + z_pos,
+                                                    ) > 0.3
+                                                    {
+                                                        if *block == Blocks::Air as u8 {
+                                                            *block = Blocks::Leaves as u8;
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                if *block == Blocks::Air as u8 {
+                                                    *block = Blocks::Leaves as u8;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -322,4 +351,16 @@ fn index(x_size: i16, z_size: i16, x: i16, y: i16, z: i16) -> Option<usize> {
     } else {
         None
     }
+}
+
+enum DecorationType {
+    Rose,
+    Tree(i16),
+}
+
+pub struct Decoration {
+    x: i16,
+    y: i16,
+    z: i16,
+    t: DecorationType,
 }
