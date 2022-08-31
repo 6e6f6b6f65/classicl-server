@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "classicl"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#67a358ac48967f02ecf1357d3d1a41584d3732d7"
+source = "git+https://gitlab.com/nokoe/classicl#974835da9ba195d211a15f93258f73f9653f3599"
 dependencies = [
  "classicl_derive",
  "classicl_packet",
@@ -160,7 +160,7 @@ dependencies = [
 [[package]]
 name = "classicl_derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#67a358ac48967f02ecf1357d3d1a41584d3732d7"
+source = "git+https://gitlab.com/nokoe/classicl#974835da9ba195d211a15f93258f73f9653f3599"
 dependencies = [
  "quote",
  "syn",
@@ -169,7 +169,7 @@ dependencies = [
 [[package]]
 name = "classicl_packet"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#67a358ac48967f02ecf1357d3d1a41584d3732d7"
+source = "git+https://gitlab.com/nokoe/classicl#974835da9ba195d211a15f93258f73f9653f3599"
 dependencies = [
  "classicl_serde",
  "serde",
@@ -179,7 +179,7 @@ dependencies = [
 [[package]]
 name = "classicl_serde"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#67a358ac48967f02ecf1357d3d1a41584d3732d7"
+source = "git+https://gitlab.com/nokoe/classicl#974835da9ba195d211a15f93258f73f9653f3599"
 dependencies = [
  "classicl_derive",
  "serde",
@@ -914,9 +914,9 @@ checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
 
 [[package]]
 name = "socket2"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10c98bba371b9b22a71a9414e420f92ddeb2369239af08200816169d5e2dd7aa"
+checksum = "02e2d2db9033d13a1567121ddd7a095ee144db4e1ca1b1bda3419bc0da294ebd"
 dependencies = [
  "libc",
  "winapi",

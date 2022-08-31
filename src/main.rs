@@ -8,7 +8,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use tokio::time;
+use tokio::{runtime::Handle, select, sync::oneshot, time};
 
 use crate::{cli::Cli, commands::Command, terrain::Terrain};
 use clap::Parser;
@@ -51,10 +51,7 @@ async fn main() {
     let opt = cli.clone();
     server
         .on_server_full(move || classicl::server::DisconnectPlayer {
-            disconnect_reason: format!(
-                "&cSorry, {} &cis full right now.",
-                opt.name
-            ),
+            disconnect_reason: format!("&cSorry, {} &cis full right now.", opt.name),
         })
         .await;
 
@@ -71,7 +68,19 @@ async fn main() {
             })
             .unwrap();
             let mut players = players.lock().unwrap();
-            players.insert(id, c.clone());
+            let (tx, rx) = oneshot::channel();
+            players.insert(id, (c.clone(), tx));
+            let c = c.clone();
+            Handle::current().spawn(async move {
+                select! {
+                    _ = rx => (),
+                    _ = time::sleep(Duration::from_secs(2)) => {
+                        c.disconnect(Some(&DisconnectPlayer {
+                            disconnect_reason: "Identification timeout".into()
+                        }));
+                    }
+                }
+            });
         })
         .await;
 
@@ -81,7 +90,8 @@ async fn main() {
     server
         .on_player_identification(move |id, p| {
             let mut players = players.lock().unwrap();
-            if let Some(c) = queue.lock().unwrap().remove(&id) {
+            if let Some((c, tx)) = queue.lock().unwrap().remove(&id) {
+                tx.send(()).unwrap();
                 let spawn_point = map.lock().unwrap().spawn_point;
                 let player = Player {
                     c: c.clone(),
