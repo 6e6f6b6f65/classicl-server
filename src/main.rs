@@ -48,6 +48,16 @@ async fn main() {
 
     info!("Terrain ready.");
 
+    let opt = cli.clone();
+    server
+        .on_server_full(move || classicl::server::DisconnectPlayer {
+            disconnect_reason: format!(
+                "&cSorry, {} &cis full right now.",
+                opt.name
+            ),
+        })
+        .await;
+
     let players = pq.clone();
 
     let opt = cli.clone();
@@ -200,12 +210,11 @@ async fn main() {
                         Err(e) => {
                             debug!("{id} tried to execute `{message}`");
                             match e {
-                                commands::CommandError::NoCommand => player.write_message(
-                                    format!("&c`{}` is not a command", message)
-                                ),
-                                commands::CommandError::CommandNotKnown => player.write_message(
-                                    format!("&c`{}` is not known", message)
-                                ),
+                                commands::CommandError::NoCommand => player
+                                    .write_message(format!("&c`{}` is not a command", message)),
+                                commands::CommandError::CommandNotKnown => {
+                                    player.write_message(format!("&c`{}` is not known", message))
+                                }
                                 commands::CommandError::TooManyArguments => player.write_message(
                                     format!("&c`{}` has too many arguments", message),
                                 ),
