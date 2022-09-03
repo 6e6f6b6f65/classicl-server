@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "classicl"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#e0e32e77e6b0f5a97c6a235c8b54a47577f84fc3"
+source = "git+https://gitlab.com/nokoe/classicl#49fa2daa3038dbd7c09a960f83679d5fd7f79ce2"
 dependencies = [
  "classicl_derive",
  "classicl_packet",
@@ -155,12 +155,13 @@ dependencies = [
  "serde",
  "serde_with",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
 name = "classicl_derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#e0e32e77e6b0f5a97c6a235c8b54a47577f84fc3"
+source = "git+https://gitlab.com/nokoe/classicl#49fa2daa3038dbd7c09a960f83679d5fd7f79ce2"
 dependencies = [
  "quote",
  "syn",
@@ -169,7 +170,7 @@ dependencies = [
 [[package]]
 name = "classicl_packet"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#e0e32e77e6b0f5a97c6a235c8b54a47577f84fc3"
+source = "git+https://gitlab.com/nokoe/classicl#49fa2daa3038dbd7c09a960f83679d5fd7f79ce2"
 dependencies = [
  "classicl_serde",
  "serde",
@@ -179,7 +180,7 @@ dependencies = [
 [[package]]
 name = "classicl_serde"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#e0e32e77e6b0f5a97c6a235c8b54a47577f84fc3"
+source = "git+https://gitlab.com/nokoe/classicl#49fa2daa3038dbd7c09a960f83679d5fd7f79ce2"
 dependencies = [
  "classicl_derive",
  "serde",
@@ -343,6 +344,18 @@ name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+
+[[package]]
+name = "futures-core"
+version = "0.3.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e5aa3de05362c3fb88de6531e6296e85cde7739cccad4b9dfeeb7f6ebce56bf"
+
+[[package]]
+name = "futures-sink"
+version = "0.3.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21b20ba5a92e727ba30e72834706623d94ac93a725410b6a6b6fbc1b07f7ba56"
 
 [[package]]
 name = "getrandom"
@@ -1014,6 +1027,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]
