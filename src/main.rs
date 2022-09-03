@@ -277,15 +277,16 @@ async fn main() {
     });
 
     let map = terrain.clone();
-    let cli = cli.clone();
+    let opt = cli.clone();
     let ctrl_c = tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("Saving map and stopping server now.");
-        save_map(cli, map);
+        save_map(opt, map);
     });
 
+    let opt = cli.clone();
     tokio::select! {
-        _ = server.run() => (),
+        _ = server.run(opt.limit) => (),
         _ = ctrl_c => (),
     }
 }

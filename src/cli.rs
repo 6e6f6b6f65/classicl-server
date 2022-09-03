@@ -36,4 +36,8 @@ pub struct Cli {
    /// Server MOTD shown when connecting
    #[clap(short, long, value_parser, default_value_t = String::from("hosted with style"))]
    pub motd: String,
+
+   #[clap(short, long, value_parser)]
+   /// Player limit
+   pub limit: Option<i8>
 }
