@@ -48,6 +48,8 @@ async fn main() {
 
     info!("Terrain ready.");
 
+    let is_changed = Arc::new(Mutex::new(false));
+
     let opt = cli.clone();
     server
         .on_server_full(move || classicl::server::DisconnectPlayer {
@@ -138,24 +140,28 @@ async fn main() {
 
     let players = pdb.clone();
     let map = terrain.clone();
+    let changed = is_changed.clone();
     server
-        .on_set_block(move |_, p| {
-            let block_type = if p.mode == 0x00 {
-                terrain::Blocks::Air as u8
-            } else {
-                p.block_type
-            };
-            map.lock().unwrap().set_block(p.x, p.y, p.z, block_type);
-            for (_, player) in players.lock().unwrap().iter_mut() {
-                player
-                    .c
-                    .write_packet(&SetBlock {
-                        x: p.x,
-                        y: p.y,
-                        z: p.z,
-                        block_type,
-                    })
-                    .unwrap();
+        .on_set_block(move |id, p| {
+            *changed.lock().unwrap() = true;
+            if players.lock().unwrap().get(&id).is_some() {
+                let block_type = if p.mode == 0x00 {
+                    terrain::Blocks::Air as u8
+                } else {
+                    p.block_type
+                };
+                map.lock().unwrap().set_block(p.x, p.y, p.z, block_type);
+                for (_, player) in players.lock().unwrap().iter_mut() {
+                    player
+                        .c
+                        .write_packet(&SetBlock {
+                            x: p.x,
+                            y: p.y,
+                            z: p.z,
+                            block_type,
+                        })
+                        .unwrap();
+                }
             }
         })
         .await;
@@ -263,15 +269,19 @@ async fn main() {
         })
         .await;
 
-    let players = pdb.clone();
     let map = terrain.clone();
     let opt = cli.clone();
+    let changed = is_changed.clone();
     tokio::spawn(async move {
         loop {
-            time::sleep(Duration::from_secs(300)).await;
-            if !players.lock().unwrap().is_empty() {
+            time::sleep(Duration::from_secs(120)).await;
+            let mut changed = changed.lock().unwrap();
+            if *changed {
                 debug!("Trying to save the map.");
+                *changed = false;
                 save_map(opt.clone(), map.clone());
+            } else {
+                debug!("Map not changed. Save discarded")
             }
         }
     });
