@@ -1,77 +1,4 @@
-pub enum Blocks {
-    Air = 0,
-    Stone = 1,
-    Grass = 2,
-    Dirt = 3,
-    /*
-    Cobblestone = 4,
-    Wood = 5,
-    Sapling = 6,
-    Bedrock = 7,
-    Water = 8,
-    StillWater = 9,
-    Lava = 10,
-    StillLava = 11,
-    Sand = 12,
-    Gravel = 13,
-    */
-    GoldOre = 14,
-    IronOre = 15,
-    CoalOre = 16,
-    Log = 17,
-    Leaves = 18,
-    /*
-    Sponge = 19,
-    Glass = 20,
-    Red = 21,
-    Orange = 22,
-    Yellow = 23,
-    Lime = 24,
-    Green = 25,
-    Teal = 26,
-    Aqua = 27,
-    Cyan = 28,
-    Blue = 29,
-    Indigo = 30,
-    Violet = 31,
-    Magenta = 32,
-    Pink = 33,
-    Black = 34,
-    Gray = 35,
-    White = 36,
-    Dandelion = 37,
-    */
-    Rose = 38,
-    /*
-    BrownMushroom = 39,
-    RedMushroom = 40,
-    Gold = 41,
-    Iron = 42,
-    DoubleSlab = 43,
-    Slab = 44,
-    Brick = 45,
-    TNT = 46,
-    Bookshelf = 47,
-    MossyRocks = 48,
-    Obsidian = 49,
-    CobblestoneSlab = 50,
-    Rope = 51,
-    Sandstone = 52,
-    Snow = 53,
-    Fire = 54,
-    LightPink = 55,
-    ForestGreen = 56,
-    Brown = 57,
-    DeepBlue = 58,
-    Turquoise = 59,
-    Ice = 60,
-    CeramicTile = 61,
-    Magma = 62,
-    Pillar = 63,
-    Crate = 64,
-    StoneBrick = 65,
-    */
-}
+pub mod blocks;
 
 const CAVE_THRESHOLD: f64 = 0.3;
 
@@ -207,24 +134,24 @@ impl Terrain {
                     let h = noise.height(x, z);
                     if y as f64 > h {
                         noise.ground(x, y, z, &mut tree_pos);
-                        buf.push(Blocks::Air as u8);
+                        buf.push(blocks::AIR);
                     } else if noise.cave(x, y, z) > CAVE_THRESHOLD {
-                        buf.push(Blocks::Air as u8);
+                        buf.push(blocks::AIR);
                     } else if h.floor() as i16 - y > 5 {
                         let ore = noise.ore(x, y, z);
                         if ore > 0.9 {
-                            buf.push(Blocks::GoldOre as u8)
+                            buf.push(blocks::GOLD_ORE)
                         } else if ore > 0.8 {
-                            buf.push(Blocks::IronOre as u8)
+                            buf.push(blocks::IRON_ORE)
                         } else if ore > 0.7 {
-                            buf.push(Blocks::CoalOre as u8)
+                            buf.push(blocks::COAL_ORE)
                         } else {
-                            buf.push(Blocks::Stone as u8)
+                            buf.push(blocks::STONE)
                         }
                     } else if h.floor() as i16 - y > 0 {
-                        buf.push(Blocks::Dirt as u8)
+                        buf.push(blocks::DIRT)
                     } else {
-                        buf.push(Blocks::Grass as u8)
+                        buf.push(blocks::GRASS)
                     }
                 }
             }
@@ -234,7 +161,7 @@ impl Terrain {
             let (x_pos, y_pos, z_pos) = (i.x, i.y, i.z);
             if let Some(index) = index(size.0, size.2, x_pos, y_pos - 1, z_pos) {
                 if let Some(&block) = buf.get(index) {
-                    if block == Blocks::Air as u8 {
+                    if block == blocks::AIR {
                         continue;
                     }
                 }
@@ -243,7 +170,7 @@ impl Terrain {
                 DecorationType::Rose => {
                     if let Some(index) = index(size.0, size.2, x_pos, y_pos, z_pos) {
                         if let Some(block) = buf.get_mut(index) {
-                            *block = Blocks::Rose as u8;
+                            *block = blocks::ROSE;
                         }
                     }
                 }
@@ -251,7 +178,7 @@ impl Terrain {
                     for y in 0..=tree_h {
                         if let Some(index) = index(size.0, size.2, x_pos, y + y_pos, z_pos) {
                             if let Some(block) = buf.get_mut(index) {
-                                *block = Blocks::Log as u8;
+                                *block = blocks::LOG;
                             }
                         }
                     }
@@ -270,13 +197,13 @@ impl Terrain {
                                                     z + z_pos,
                                                 ) > 0.3
                                                 {
-                                                    if *block == Blocks::Air as u8 {
-                                                        *block = Blocks::Leaves as u8;
+                                                    if *block == blocks::AIR {
+                                                        *block = blocks::LEAVES;
                                                     }
                                                 }
                                             } else {
-                                                if *block == Blocks::Air as u8 {
-                                                    *block = Blocks::Leaves as u8;
+                                                if *block == blocks::AIR {
+                                                    *block = blocks::LEAVES;
                                                 }
                                             }
                                         } else if (x < 2 && x > -2) && (z < 2 && z > -2) {
@@ -288,14 +215,14 @@ impl Terrain {
                                                         z + z_pos,
                                                     ) > 0.3
                                                     {
-                                                        if *block == Blocks::Air as u8 {
-                                                            *block = Blocks::Leaves as u8;
+                                                        if *block == blocks::AIR {
+                                                            *block = blocks::LEAVES;
                                                         }
                                                     }
                                                 }
                                             } else {
-                                                if *block == Blocks::Air as u8 {
-                                                    *block = Blocks::Leaves as u8;
+                                                if *block == blocks::AIR {
+                                                    *block = blocks::LEAVES;
                                                 }
                                             }
                                         }

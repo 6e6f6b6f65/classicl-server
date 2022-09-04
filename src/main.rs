@@ -146,7 +146,7 @@ async fn main() {
             *changed.lock().unwrap() = true;
             if players.lock().unwrap().get(&id).is_some() {
                 let block_type = if p.mode == 0x00 {
-                    terrain::Blocks::Air as u8
+                    terrain::blocks::AIR
                 } else {
                     p.block_type
                 };
