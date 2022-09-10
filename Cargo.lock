@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "classicl"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#0f7dca5ec287317b050f31ba1f30d1dd39a52d17"
+source = "git+https://gitlab.com/nokoe/classicl#390a591908af61127253245c061670551273e670"
 dependencies = [
  "classicl_derive",
  "classicl_packet",
@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "classicl_derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#0f7dca5ec287317b050f31ba1f30d1dd39a52d17"
+source = "git+https://gitlab.com/nokoe/classicl#390a591908af61127253245c061670551273e670"
 dependencies = [
  "quote",
  "syn",
@@ -170,7 +170,7 @@ dependencies = [
 [[package]]
 name = "classicl_packet"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#0f7dca5ec287317b050f31ba1f30d1dd39a52d17"
+source = "git+https://gitlab.com/nokoe/classicl#390a591908af61127253245c061670551273e670"
 dependencies = [
  "classicl_serde",
  "serde",
@@ -180,7 +180,7 @@ dependencies = [
 [[package]]
 name = "classicl_serde"
 version = "0.1.0"
-source = "git+https://gitlab.com/nokoe/classicl#0f7dca5ec287317b050f31ba1f30d1dd39a52d17"
+source = "git+https://gitlab.com/nokoe/classicl#390a591908af61127253245c061670551273e670"
 dependencies = [
  "classicl_derive",
  "serde",
@@ -188,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "classicl_server"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bincode",
  "clap",
@@ -336,7 +336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f82b0f4c27ad9f8bfd1f3208d882da2b09c301bc1c828fd3a00d0216d2fbbff6"
 dependencies = [
  "crc32fast",
- "miniz_oxide 0.5.3",
+ "miniz_oxide 0.5.4",
 ]
 
 [[package]]
@@ -546,9 +546,9 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f5c75688da582b8ffc1f1799e9db273f32133c49e048f614d22ec3256773ccc"
+checksum = "96590ba8f175222643a85693f33d26e9c8a015f599c216509b1a6894af675d34"
 dependencies = [
  "adler",
 ]
@@ -871,9 +871,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89df7a26519371a3cce44fbb914c2819c84d9b897890987fa3ab096491cc0ea8"
+checksum = "368f2d60d049ea019a84dcd6687b0d1e0030fe663ae105039bdf967ed5e6a9a7"
 dependencies = [
  "base64",
  "chrono",
@@ -887,9 +887,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de337f322382fcdfbb21a014f7c224ee041a23785651db67b9827403178f698f"
+checksum = "1ccadfacf6cf10faad22bbadf55986bdd0856edfb5d9210aa1dcf1f516e84e93"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1031,9 +1031,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
+checksum = "0bb2e075f03b3d66d8d8785356224ba688d2906a371015e225beeb65ca92c740"
 dependencies = [
  "bytes",
  "futures-core",
