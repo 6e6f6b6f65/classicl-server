@@ -15,6 +15,8 @@ The project can be installed using Cargo through the following steps:
   [official guide](https://www.rust-lang.org/tools/install).
 - Run `cargo install --git https://gitlab.com/nokoe/classicl-server`
 
+You can also download pre-built binaries from [Github Releases](https://github.com/6e6f6b6f65/classicl-server/releases).
+
 ## Usage
 
 Use `classicl_server --help` for usage information, running without providing
