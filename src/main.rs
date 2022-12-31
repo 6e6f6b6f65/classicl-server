@@ -1,14 +1,13 @@
 use classicl::{client, server::*, ClientController, Packet};
-use log::{debug, info};
+use log::{debug, info, LevelFilter};
 use std::{
     collections::HashMap,
     fs::File,
     io::Write,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    time::Duration,
+    time::Duration, sync::Arc,
 };
-use tokio::{select, sync::oneshot, time};
+use tokio::{select, sync::{oneshot, Mutex}, time};
 
 use crate::{cli::Cli, commands::Command, terrain::Terrain};
 use clap::Parser;
@@ -21,12 +20,13 @@ const PLAYER_HEIGHT: i16 = 51 * 2;
 
 #[tokio::main]
 async fn main() {
-    simple_logger::SimpleLogger::new()
-        .with_colors(true)
-        .with_level(log::LevelFilter::Info)
-        .env()
-        .init()
-        .unwrap();
+    env_logger::builder()
+        .default_format()
+        .filter_level(LevelFilter::Info)
+        .parse_env("RUST_LOG")
+        .target(env_logger::Target::Stderr)
+        .init();
+
     let cli = Arc::new(Cli::parse());
     std::fs::DirBuilder::new()
         .recursive(true)
@@ -71,7 +71,7 @@ async fn main() {
             })
             .unwrap();
 
-            let mut players = players.lock().unwrap();
+            let mut players = players.lock().await;
             let (tx, rx) = oneshot::channel();
             players.insert(data.id, (data.client.clone(), tx));
             let c = data.client.clone();
@@ -95,10 +95,10 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().unwrap();
-            if let Some((c, tx)) = queue.lock().unwrap().remove(&data.id) {
+            let mut players = players.lock().await;
+            if let Some((c, tx)) = queue.lock().await.remove(&data.id) {
                 tx.send(()).unwrap();
-                let spawn_point = map.lock().unwrap().spawn_point;
+                let spawn_point = map.lock().await.spawn_point;
                 let player = Player {
                     c: c.clone(),
                     player_name: data.data.username.to_string(),
@@ -114,7 +114,7 @@ async fn main() {
                 let mut buf = vec![LevelInitialize::ID];
                 {
                     buf.append(&mut (classicl::to_bytes(&LevelInitialize {}).unwrap()));
-                    let map = map.lock().unwrap();
+                    let map = map.lock().await;
                     for i in map.to_chunks() {
                         buf.push(LevelDataChunk::ID);
                         buf.append(&mut classicl::to_bytes(i).unwrap());
@@ -149,15 +149,15 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            *changed.lock().unwrap() = true;
-            if players.lock().unwrap().get(&data.id).is_some() {
+            *changed.lock().await = true;
+            if players.lock().await.get(&data.id).is_some() {
                 let block_type = if data.data.mode == 0x00 {
                     terrain::blocks::AIR
                 } else {
                     data.data.block_type
                 };
-                map.lock().unwrap().set_block(data.data.x, data.data.y, data.data.z, block_type);
-                for (_, player) in players.lock().unwrap().iter_mut() {
+                map.lock().await.set_block(data.data.x, data.data.y, data.data.z, block_type);
+                for (_, player) in players.lock().await.iter_mut() {
                     player
                         .c
                         .write_packet(&SetBlock {
@@ -177,7 +177,7 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().unwrap();
+            let mut players = players.lock().await;
             let mut mplayer = None;
             if let Some(player) = players.get_mut(&data.id) {
                 player.set_pos_ori(&data.data);
@@ -198,7 +198,7 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().unwrap();
+            let mut players = players.lock().await;
 
             if let Some(player) = players.get(&data.id) {
                 let message: &str = data.data.message.trim();
@@ -273,9 +273,9 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let _ = players.lock().unwrap().remove(&data.id);
-            let _ = queue.lock().unwrap().remove(&data.id);
-            for (_, p) in players.lock().unwrap().iter_mut() {
+            let _ = players.lock().await.remove(&data.id);
+            let _ = queue.lock().await.remove(&data.id);
+            for (_, p) in players.lock().await.iter_mut() {
                 p.c.write_packet(&DespawnPlayer { player_id: data.id }).unwrap();
             }
         }
@@ -287,11 +287,11 @@ async fn main() {
     tokio::spawn(async move {
         loop {
             time::sleep(Duration::from_secs(120)).await;
-            let mut changed = changed.lock().unwrap();
+            let mut changed = changed.lock().await;
             if *changed {
                 debug!("Trying to save the map.");
                 *changed = false;
-                save_map(opt.clone(), map.clone());
+                save_map(opt.clone(), map.clone()).await;
             } else {
                 debug!("Map not changed. Save discarded")
             }
@@ -303,7 +303,7 @@ async fn main() {
     let ctrl_c = tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("Saving map and stopping server now.");
-        save_map(opt, map);
+        save_map(opt, map).await;
     });
 
     let opt = cli.clone();
@@ -373,8 +373,8 @@ fn to_fixed_point(v: f64) -> i16 {
     (v * 32.0).round() as i16
 }
 
-fn save_map(cli: Arc<Cli>, map: Arc<Mutex<Terrain>>) {
-    let map = map.lock().unwrap();
+async fn save_map(cli: Arc<Cli>, map: Arc<Mutex<Terrain>>) {
+    let map = map.lock().await;
     let data = bincode::serialize(&*map).unwrap();
     let path = generate_path(&cli.data);
 
