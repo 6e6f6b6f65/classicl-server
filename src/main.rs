@@ -5,9 +5,14 @@ use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
-    time::Duration, sync::Arc,
+    sync::Arc,
+    time::Duration,
 };
-use tokio::{select, sync::{oneshot, Mutex}, time};
+use tokio::{
+    select,
+    sync::{oneshot, Mutex},
+    time,
+};
 
 use crate::{cli::Cli, commands::Command, terrain::Terrain};
 use clap::Parser;
@@ -43,7 +48,7 @@ async fn main() {
         bincode::deserialize_from(file).unwrap()
     } else {
         info!("Generating Terrain...");
-        Terrain::new((cli.x_size, cli.y_size, cli.z_size), cli.height)
+        Terrain::new((cli.x_size, cli.y_size, cli.z_size), cli.terrain_height)
     }));
 
     info!("Terrain ready.");
@@ -63,27 +68,32 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            data.client.write_packet(&ServerIdentification {
-                protocol_version: 0x07,
-                server_name: opt.name.clone(),
-                server_motd: opt.motd.clone(),
-                user_type: 0x00,
-            })
-            .unwrap();
-
-            let mut players = players.lock().await;
-            let (tx, rx) = oneshot::channel();
-            players.insert(data.id, (data.client.clone(), tx));
-            let c = data.client.clone();
+            let players = players.clone();
+            let opt = opt.clone();
             tokio::spawn(async move {
-                select! {
-                    _ = rx => (),
-                    _ = time::sleep(Duration::from_secs(2)) => {
-                        c.disconnect(Some(&DisconnectPlayer {
-                            disconnect_reason: "Identification timeout".into()
-                        }));
+                data.client
+                    .write_packet(&ServerIdentification {
+                        protocol_version: 0x07,
+                        server_name: opt.name.clone(),
+                        server_motd: opt.motd.clone(),
+                        user_type: 0x00,
+                    })
+                    .unwrap();
+
+                let mut players = players.lock().await;
+                let (tx, rx) = oneshot::channel();
+                players.insert(data.id, (data.client.clone(), tx));
+                let c = data.client.clone();
+                tokio::spawn(async move {
+                    select! {
+                        _ = rx => (),
+                        _ = time::sleep(Duration::from_secs(2)) => {
+                            c.disconnect(Some(&DisconnectPlayer {
+                                disconnect_reason: "Identification timeout".into()
+                            }));
+                        }
                     }
-                }
+                });
             });
         }
     });
@@ -95,50 +105,55 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().await;
-            if let Some((c, tx)) = queue.lock().await.remove(&data.id) {
-                tx.send(()).unwrap();
-                let spawn_point = map.lock().await.spawn_point;
-                let player = Player {
-                    c: c.clone(),
-                    player_name: data.data.username.to_string(),
-                    x: spawn_point.0,
-                    y: spawn_point.1,
-                    z: spawn_point.2,
-                    yaw: 0,
-                    pitch: 0,
-                };
+            let players = players.clone();
+            let queue = queue.clone();
+            let map = map.clone();
+            tokio::spawn(async move {
+                let mut players = players.lock().await;
+                if let Some((c, tx)) = queue.lock().await.remove(&data.id) {
+                    tx.send(()).unwrap();
+                    let spawn_point = map.lock().await.spawn_point;
+                    let player = Player {
+                        c: c.clone(),
+                        player_name: data.data.username.to_string(),
+                        x: spawn_point.0,
+                        y: spawn_point.1,
+                        z: spawn_point.2,
+                        yaw: 0,
+                        pitch: 0,
+                    };
 
-                info!("{} identified as {}", data.id, data.data.username.trim());
+                    info!("{} identified as {}", data.id, data.data.username.trim());
 
-                let mut buf = vec![LevelInitialize::ID];
-                {
-                    buf.append(&mut (classicl::to_bytes(&LevelInitialize {}).unwrap()));
-                    let map = map.lock().await;
-                    for i in map.to_chunks() {
-                        buf.push(LevelDataChunk::ID);
-                        buf.append(&mut classicl::to_bytes(i).unwrap());
+                    let mut buf = vec![LevelInitialize::ID];
+                    {
+                        buf.append(&mut (classicl::to_bytes(&LevelInitialize {}).unwrap()));
+                        let map = map.lock().await;
+                        for i in map.to_chunks() {
+                            buf.push(LevelDataChunk::ID);
+                            buf.append(&mut classicl::to_bytes(i).unwrap());
+                        }
+
+                        buf.push(LevelFinalize::ID);
+                        buf.append(
+                            &mut classicl::to_bytes(&LevelFinalize {
+                                x_size: map.size.0,
+                                y_size: map.size.1,
+                                z_size: map.size.2,
+                            })
+                            .unwrap(),
+                        );
                     }
+                    c.write_bytes(buf);
 
-                    buf.push(LevelFinalize::ID);
-                    buf.append(
-                        &mut classicl::to_bytes(&LevelFinalize {
-                            x_size: map.size.0,
-                            y_size: map.size.1,
-                            z_size: map.size.2,
-                        })
-                        .unwrap(),
-                    );
+                    for (pid, p) in players.iter() {
+                        p.c.write_packet(&player.to_spawn(data.id)).unwrap();
+                        c.write_packet(&p.to_spawn(*pid)).unwrap();
+                    }
+                    c.write_packet(&player.to_spawn(-1)).unwrap();
+                    players.insert(data.id, player);
                 }
-                c.write_bytes(buf);
-
-                for (pid, p) in players.iter() {
-                    p.c.write_packet(&player.to_spawn(data.id)).unwrap();
-                    c.write_packet(&p.to_spawn(*pid)).unwrap();
-                }
-                c.write_packet(&player.to_spawn(-1)).unwrap();
-                players.insert(data.id, player);
-            }
+            });
         }
     });
 
@@ -149,26 +164,33 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            *changed.lock().await = true;
-            if players.lock().await.get(&data.id).is_some() {
-                let block_type = if data.data.mode == 0x00 {
-                    terrain::blocks::AIR
-                } else {
-                    data.data.block_type
-                };
-                map.lock().await.set_block(data.data.x, data.data.y, data.data.z, block_type);
-                for (_, player) in players.lock().await.iter_mut() {
-                    player
-                        .c
-                        .write_packet(&SetBlock {
-                            x: data.data.x,
-                            y: data.data.y,
-                            z: data.data.z,
-                            block_type,
-                        })
-                        .unwrap();
+            let players = players.clone();
+            let changed = changed.clone();
+            let map = map.clone();
+            tokio::spawn(async move {
+                *changed.lock().await = true;
+                if players.lock().await.get(&data.id).is_some() {
+                    let block_type = if data.data.mode == 0x00 {
+                        terrain::blocks::AIR
+                    } else {
+                        data.data.block_type
+                    };
+                    map.lock()
+                        .await
+                        .set_block(data.data.x, data.data.y, data.data.z, block_type);
+                    for (_, player) in players.lock().await.iter_mut() {
+                        player
+                            .c
+                            .write_packet(&SetBlock {
+                                x: data.data.x,
+                                y: data.data.y,
+                                z: data.data.z,
+                                block_type,
+                            })
+                            .unwrap();
+                    }
                 }
-            }
+            });
         }
     });
 
@@ -177,19 +199,22 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().await;
-            let mut mplayer = None;
-            if let Some(player) = players.get_mut(&data.id) {
-                player.set_pos_ori(&data.data);
-                mplayer = Some(player.clone())
-            }
-            if let Some(player) = mplayer {
-                for (i, p) in players.iter_mut() {
-                    if *i != data.id {
-                        p.c.write_packet(&player.to_pos_ori_upd(data.id)).unwrap();
+            let players = players.clone();
+            tokio::spawn(async move {
+                let mut players = players.lock().await;
+                let mut mplayer = None;
+                if let Some(player) = players.get_mut(&data.id) {
+                    player.set_pos_ori(&data.data);
+                    mplayer = Some(player.clone())
+                }
+                if let Some(player) = mplayer {
+                    for (i, p) in players.iter_mut() {
+                        if *i != data.id {
+                            p.c.write_packet(&player.to_pos_ori_upd(data.id)).unwrap();
+                        }
                     }
                 }
-            }
+            });
         }
     });
 
@@ -198,72 +223,85 @@ async fn main() {
     tokio::spawn(async move {
         let mut handler = handler.await.unwrap();
         while let Some(data) = handler.get().await {
-            let mut players = players.lock().await;
+            let players = players.clone();
+            tokio::spawn(async move {
+                let mut players = players.lock().await;
 
-            if let Some(player) = players.get(&data.id) {
-                let message: &str = data.data.message.trim();
+                if let Some(player) = players.get(&data.id) {
+                    let message: &str = data.data.message.trim();
 
-                // Commands
-                if message.starts_with('/') {
-                    match Command::from_str(&message[1..]) {
-                        Ok(cmd) => match cmd {
-                            Command::Tp(other_p) => {
-                                if let Some((o_id, other_p)) = players
-                                    .iter()
-                                    .find(|(_, p)| p.player_name.trim() == &other_p)
-                                {
-                                    info!("{} teleported to {o_id}", data.id);
-                                    player
-                                        .c
-                                        .write_packet(&PositionOrientationTeleport {
-                                            player_id: -1,
-                                            x: other_p.x,
-                                            y: other_p.y,
-                                            z: other_p.z,
-                                            yaw: other_p.yaw,
-                                            pitch: 0,
-                                        })
-                                        .unwrap();
-                                } else {
-                                    debug!("{} tried to teleport to {other_p}", data.id);
-                                    player.write_message(format!(
-                                        "&cCould not find player `{}`",
-                                        other_p
-                                    ));
+                    // Commands
+                    if message.starts_with('/') {
+                        match Command::from_str(&message[1..]) {
+                            Ok(cmd) => match cmd {
+                                Command::Tp(other_p) => {
+                                    if let Some((o_id, other_p)) = players
+                                        .iter()
+                                        .find(|(_, p)| p.player_name.trim() == &other_p)
+                                    {
+                                        info!("{} teleported to {o_id}", data.id);
+                                        player
+                                            .c
+                                            .write_packet(&PositionOrientationTeleport {
+                                                player_id: -1,
+                                                x: other_p.x,
+                                                y: other_p.y,
+                                                z: other_p.z,
+                                                yaw: other_p.yaw,
+                                                pitch: 0,
+                                            })
+                                            .unwrap();
+                                    } else {
+                                        debug!("{} tried to teleport to {other_p}", data.id);
+                                        player.write_message(format!(
+                                            "&cCould not find player `{}`",
+                                            other_p
+                                        ));
+                                    }
                                 }
-                            }
-                        },
-                        Err(e) => {
-                            debug!("{} tried to execute `{message}`", data.id);
-                            match e {
-                                commands::CommandError::NoCommand => player
-                                    .write_message(format!("&c`{}` is not a command", message)),
-                                commands::CommandError::CommandNotKnown => {
-                                    player.write_message(format!("&c`{}` is not known", message))
+                            },
+                            Err(e) => {
+                                debug!("{} tried to execute `{message}`", data.id);
+                                match e {
+                                    commands::CommandError::NoCommand => player
+                                        .write_message(format!("&c`{}` is not a command", message)),
+                                    commands::CommandError::CommandNotKnown => player
+                                        .write_message(format!("&c`{}` is not known", message)),
+                                    commands::CommandError::TooManyArguments => player
+                                        .write_message(format!(
+                                            "&c`{}` has too many arguments",
+                                            message
+                                        )),
+                                    commands::CommandError::NotEnoughArguments => player
+                                        .write_message(format!(
+                                            "&c`{}` has not enough arguments",
+                                            message
+                                        )),
                                 }
-                                commands::CommandError::TooManyArguments => player.write_message(
-                                    format!("&c`{}` has too many arguments", message),
-                                ),
-                                commands::CommandError::NotEnoughArguments => player.write_message(
-                                    format!("&c`{}` has not enough arguments", message),
-                                ),
                             }
                         }
-                    }
-                } else {
-                    let mut message =
-                        format!("&7{}:&f {}", player.player_name.trim(), data.data.message.trim());
-                    info!("{} wrote: {}", player.player_name.trim(), data.data.message.trim());
-                    message.truncate(64);
-                    for (_, p) in players.iter_mut() {
-                        p.c.write_packet(&Message {
-                            player_id: data.id,
-                            message: message.clone(),
-                        })
-                        .unwrap();
+                    } else {
+                        let mut message = format!(
+                            "&7{}:&f {}",
+                            player.player_name.trim(),
+                            data.data.message.trim()
+                        );
+                        info!(
+                            "{} wrote: {}",
+                            player.player_name.trim(),
+                            data.data.message.trim()
+                        );
+                        message.truncate(64);
+                        for (_, p) in players.iter_mut() {
+                            p.c.write_packet(&Message {
+                                player_id: data.id,
+                                message: message.clone(),
+                            })
+                            .unwrap();
+                        }
                     }
                 }
-            }
+            });
         }
     });
 
@@ -276,7 +314,8 @@ async fn main() {
             let _ = players.lock().await.remove(&data.id);
             let _ = queue.lock().await.remove(&data.id);
             for (_, p) in players.lock().await.iter_mut() {
-                p.c.write_packet(&DespawnPlayer { player_id: data.id }).unwrap();
+                p.c.write_packet(&DespawnPlayer { player_id: data.id })
+                    .unwrap();
             }
         }
     });

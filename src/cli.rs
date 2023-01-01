@@ -23,7 +23,7 @@ pub struct Cli {
 
    /// Ground height
    #[clap(short, long, value_parser, default_value_t = 20.0)]
-   pub height: f64,
+   pub terrain_height: f64,
 
    /// Data directory
    #[clap(short, long, value_parser, default_value_os_t = PathBuf::from("data"))]
