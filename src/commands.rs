@@ -6,7 +6,7 @@ impl Command {
     pub fn from_str(s: &str) -> Result<Self, CommandError> {
         let split = s.split(' ').collect::<Vec<&str>>();
 
-        if let Some(cmd) = split.get(0) {
+        if let Some(cmd) = split.first() {
             match *cmd {
                 "tp" => {
                     if let Some(player) = split.get(1) {

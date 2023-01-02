@@ -196,34 +196,27 @@ impl Terrain {
                                                     y + tree_h + y_pos,
                                                     z + z_pos,
                                                 ) > 0.3
+                                                    && *block == blocks::AIR
                                                 {
-                                                    if *block == blocks::AIR {
-                                                        *block = blocks::LEAVES;
-                                                    }
-                                                }
-                                            } else {
-                                                if *block == blocks::AIR {
                                                     *block = blocks::LEAVES;
                                                 }
+                                            } else if *block == blocks::AIR {
+                                                *block = blocks::LEAVES;
                                             }
                                         } else if (x < 2 && x > -2) && (z < 2 && z > -2) {
                                             if (x == 1 || x == -1) && (z == 1 || z == -1) {
-                                                if y == 0 {
-                                                    if noise.leaves(
+                                                if y == 0
+                                                    && noise.leaves(
                                                         x + x_pos,
                                                         y + tree_h + y_pos,
                                                         z + z_pos,
                                                     ) > 0.3
-                                                    {
-                                                        if *block == blocks::AIR {
-                                                            *block = blocks::LEAVES;
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                if *block == blocks::AIR {
+                                                    && *block == blocks::AIR
+                                                {
                                                     *block = blocks::LEAVES;
                                                 }
+                                            } else if *block == blocks::AIR {
+                                                *block = blocks::LEAVES;
                                             }
                                         }
                                     }

@@ -231,13 +231,13 @@ async fn main() {
                     let message: &str = data.data.message.trim();
 
                     // Commands
-                    if message.starts_with('/') {
-                        match Command::from_str(&message[1..]) {
+                    if let Some(cmd_text) = message.strip_prefix('/') {
+                        match Command::from_str(cmd_text) {
                             Ok(cmd) => match cmd {
                                 Command::Tp(other_p) => {
                                     if let Some((o_id, other_p)) = players
                                         .iter()
-                                        .find(|(_, p)| p.player_name.trim() == &other_p)
+                                        .find(|(_, p)| p.player_name.trim() == other_p)
                                     {
                                         info!("{} teleported to {o_id}", data.id);
                                         player
@@ -421,7 +421,6 @@ async fn save_map(cli: Arc<Cli>, map: Arc<Mutex<Terrain>>) {
     file.write_all(&data).unwrap();
 }
 
-fn generate_path(path: &PathBuf) -> PathBuf {
-    let dir: &Path = path.as_path();
-    dir.join("mapdata")
+fn generate_path(path: &Path) -> PathBuf {
+    path.join("mapdata")
 }
