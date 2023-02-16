@@ -78,6 +78,7 @@ async fn main() {
                         server_motd: opt.motd.clone(),
                         user_type: 0x00,
                     })
+                    .await
                     .unwrap();
 
                 let mut players = players.lock().await;
@@ -90,7 +91,7 @@ async fn main() {
                         _ = time::sleep(Duration::from_secs(2)) => {
                             c.disconnect(Some(&DisconnectPlayer {
                                 disconnect_reason: "Identification timeout".into()
-                            }));
+                            })).await;
                         }
                     }
                 });
@@ -144,13 +145,13 @@ async fn main() {
                             .unwrap(),
                         );
                     }
-                    c.write_bytes(buf);
+                    c.write_bytes(buf).await;
 
                     for (pid, p) in players.iter() {
-                        p.c.write_packet(&player.to_spawn(data.id)).unwrap();
-                        c.write_packet(&p.to_spawn(*pid)).unwrap();
+                        p.c.write_packet(&player.to_spawn(data.id)).await.unwrap();
+                        c.write_packet(&p.to_spawn(*pid)).await.unwrap();
                     }
-                    c.write_packet(&player.to_spawn(-1)).unwrap();
+                    c.write_packet(&player.to_spawn(-1)).await.unwrap();
                     players.insert(data.id, player);
                 }
             });
@@ -187,6 +188,7 @@ async fn main() {
                                 z: data.data.z,
                                 block_type,
                             })
+                            .await
                             .unwrap();
                     }
                 }
@@ -210,7 +212,9 @@ async fn main() {
                 if let Some(player) = mplayer {
                     for (i, p) in players.iter_mut() {
                         if *i != data.id {
-                            p.c.write_packet(&player.to_pos_ori_upd(data.id)).unwrap();
+                            p.c.write_packet(&player.to_pos_ori_upd(data.id))
+                                .await
+                                .unwrap();
                         }
                     }
                 }
@@ -250,33 +254,51 @@ async fn main() {
                                                 yaw: other_p.yaw,
                                                 pitch: 0,
                                             })
+                                            .await
                                             .unwrap();
                                     } else {
                                         debug!("{} tried to teleport to {other_p}", data.id);
-                                        player.write_message(format!(
-                                            "&cCould not find player `{}`",
-                                            other_p
-                                        ));
+                                        player
+                                            .write_message(format!(
+                                                "&cCould not find player `{}`",
+                                                other_p
+                                            ))
+                                            .await;
                                     }
                                 }
                             },
                             Err(e) => {
                                 debug!("{} tried to execute `{message}`", data.id);
                                 match e {
-                                    commands::CommandError::NoCommand => player
-                                        .write_message(format!("&c`{}` is not a command", message)),
-                                    commands::CommandError::CommandNotKnown => player
-                                        .write_message(format!("&c`{}` is not known", message)),
-                                    commands::CommandError::TooManyArguments => player
-                                        .write_message(format!(
-                                            "&c`{}` has too many arguments",
-                                            message
-                                        )),
-                                    commands::CommandError::NotEnoughArguments => player
-                                        .write_message(format!(
-                                            "&c`{}` has not enough arguments",
-                                            message
-                                        )),
+                                    commands::CommandError::NoCommand => {
+                                        player
+                                            .write_message(format!(
+                                                "&c`{}` is not a command",
+                                                message
+                                            ))
+                                            .await
+                                    }
+                                    commands::CommandError::CommandNotKnown => {
+                                        player
+                                            .write_message(format!("&c`{}` is not known", message))
+                                            .await
+                                    }
+                                    commands::CommandError::TooManyArguments => {
+                                        player
+                                            .write_message(format!(
+                                                "&c`{}` has too many arguments",
+                                                message
+                                            ))
+                                            .await
+                                    }
+                                    commands::CommandError::NotEnoughArguments => {
+                                        player
+                                            .write_message(format!(
+                                                "&c`{}` has not enough arguments",
+                                                message
+                                            ))
+                                            .await
+                                    }
                                 }
                             }
                         }
@@ -297,6 +319,7 @@ async fn main() {
                                 player_id: data.id,
                                 message: message.clone(),
                             })
+                            .await
                             .unwrap();
                         }
                     }
@@ -315,6 +338,7 @@ async fn main() {
             let _ = queue.lock().await.remove(&data.id);
             for (_, p) in players.lock().await.iter_mut() {
                 p.c.write_packet(&DespawnPlayer { player_id: data.id })
+                    .await
                     .unwrap();
             }
         }
@@ -397,13 +421,14 @@ impl Player {
         self.pitch = p.pitch;
     }
 
-    pub fn write_message(&self, mut message: String) {
+    pub async fn write_message(&self, mut message: String) {
         message.truncate(64);
         self.c
             .write_packet(&Message {
                 player_id: 0,
                 message,
             })
+            .await
             .unwrap();
     }
 }
