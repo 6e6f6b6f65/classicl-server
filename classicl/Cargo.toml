@@ -1,0 +1,18 @@
+[package]
+name = "classicl"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+classicl_serde = { path = "../classicl_serde" }
+classicl_packet = { path = "../classicl_packet" }
+classicl_derive = { path = "../classicl_derive" }
+serde = { version = "1.0.152", features = ["derive"] }
+serde_with = "2.2.0"
+tokio = { version = "1.25.0", features = ["full"] }
+tokio-util = "0.7.7"
+log = "0.4.17"
+anyhow = "1.0.69"
+

@@ -1,0 +1,10 @@
+[package]
+name = "classicl_serde"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0.140"
+classicl_derive = { path = "../classicl_derive" }
