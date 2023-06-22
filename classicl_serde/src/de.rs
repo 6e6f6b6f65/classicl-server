@@ -51,6 +51,8 @@ impl<'de> Deserializer<'de> {
         if let Some(a) = self.input.get(0..2) {
             if self.input.len() > 2 {
                 self.input = &self.input[2..];
+            } else {
+                self.input = &[]
             }
             let mut buf = [0u8; 2];
             buf.copy_from_slice(a);
