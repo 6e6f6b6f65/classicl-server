@@ -41,6 +41,10 @@ pub struct Cli {
     #[clap(short, long, value_parser, default_value_t = 20.0)]
     pub terrain_height: f64,
 
+    /// Water height
+    #[clap(short, long, value_parser, default_value_t = 2)]
+    pub water_height: i16,
+
     /// Data directory
     #[clap(short, long, value_parser, default_value_os_t = PathBuf::from("data"))]
     pub data: PathBuf,

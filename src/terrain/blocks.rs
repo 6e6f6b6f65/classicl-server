@@ -23,7 +23,9 @@ pub const COBBLESTONE: u8 = 4;
 pub const WOOD: u8 = 5;
 pub const SAPLING: u8 = 6;
 pub const BEDROCK: u8 = 7;
+*/
 pub const WATER: u8 = 8;
+/*
 pub const STILL_WATER: u8 = 9;
 pub const LAVA: u8 = 10;
 pub const STILL_LAVA: u8 = 11;

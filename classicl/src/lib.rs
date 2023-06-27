@@ -303,7 +303,7 @@ impl Server {
 
                             on_message.send(OnMessage { id, data }).await?;
                         }
-                        _ => trace!("Unknown packet id received from {id}"),
+                        i => trace!("Unknown packet id ({i}) received from {id}"),
                     }
                 }
             };

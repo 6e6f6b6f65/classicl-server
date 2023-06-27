@@ -64,7 +64,11 @@ async fn main() {
         bincode::deserialize_from(file).unwrap()
     } else {
         info!("Generating Terrain...");
-        Terrain::new((cli.x_size, cli.y_size, cli.z_size), cli.terrain_height)
+        Terrain::new(
+            (cli.x_size, cli.y_size, cli.z_size),
+            cli.terrain_height,
+            cli.water_height,
+        )
     }));
 
     info!("Terrain ready.");

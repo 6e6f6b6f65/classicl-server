@@ -126,7 +126,7 @@ pub struct Terrain {
 }
 
 impl Terrain {
-    pub fn new(size: (i16, i16, i16), height: f64) -> Self {
+    pub fn new(size: (i16, i16, i16), height: f64, water_height: i16) -> Self {
         Self {
             size,
             spawn_point: (
@@ -134,11 +134,11 @@ impl Terrain {
                 to_fixed_point(TerrainNoise::new(height).height(10, 10)) + PLAYER_HEIGHT,
                 to_fixed_point(10.0),
             ),
-            inner: Self::generate(size, height),
+            inner: Self::generate(size, height, water_height),
         }
     }
 
-    fn generate(size: (i16, i16, i16), height: f64) -> Vec<u8> {
+    fn generate(size: (i16, i16, i16), height: f64, water_height: i16) -> Vec<u8> {
         let mut tree_pos = vec![];
         let noise = TerrainNoise::new(height);
         let (x, y, z) = size;
@@ -149,8 +149,12 @@ impl Terrain {
                 for x in 0..x {
                     let h = noise.height(x, z);
                     if y as f64 > h {
-                        noise.ground(x, y, z, &mut tree_pos);
-                        buf.push(blocks::AIR);
+                        if y < water_height {
+                            buf.push(blocks::WATER)
+                        } else {
+                            noise.ground(x, y, z, &mut tree_pos);
+                            buf.push(blocks::AIR);
+                        }
                     } else if noise.cave(x, y, z) > CAVE_THRESHOLD {
                         buf.push(blocks::AIR);
                     } else if h.floor() as i16 - y > 5 {
@@ -164,7 +168,7 @@ impl Terrain {
                         } else {
                             buf.push(blocks::STONE)
                         }
-                    } else if h.floor() as i16 - y > 0 {
+                    } else if h.floor() as i16 - y > 0 || y < water_height - 1 {
                         buf.push(blocks::DIRT)
                     } else {
                         buf.push(blocks::GRASS)
