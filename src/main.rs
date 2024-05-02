@@ -53,7 +53,7 @@ async fn main() {
         .recursive(true)
         .create(&cli.data)
         .unwrap();
-    let mut server = classicl::Server::new(&cli.adress).await.unwrap();
+    let mut server = classicl::Server::new(&cli.address).await.unwrap();
 
     let pdb: Arc<Mutex<HashMap<i8, Player>>> = Arc::new(Mutex::new(HashMap::new()));
     let pq = Arc::new(Mutex::new(HashMap::new()));

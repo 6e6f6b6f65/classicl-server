@@ -21,9 +21,9 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct Cli {
-    /// Adress to listen on
+    /// Address to listen on
     #[clap(short, long, value_parser, default_value_t = String::from("0.0.0.0:25565"))]
-    pub adress: String,
+    pub address: String,
 
     /// x size
     #[clap(short, long, value_parser = clap::value_parser!(i16).range(1..), default_value_t = 128)]
